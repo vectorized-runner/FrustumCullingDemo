@@ -17,6 +17,7 @@ namespace SphereCulling
 		private int _spawnedCount;
 		private SphereDataManaged _dataManaged = new();
 		private SphereDataUnmanaged _dataUnmanaged;
+		private SphereDataSIMD _dataSIMD;
 		private Random Random;
 		private Plane[] _managedPlanes = new Plane[Constants.PlaneCount];
 		private Camera _camera;
@@ -68,6 +69,20 @@ namespace SphereCulling
 
 					break;
 				}
+				case SphereCullingMode.CullJobsBurstSIMDShuffled:
+				{
+					_dataSIMD.Init(count);
+
+					for (int i = 0; i < count; i++)
+					{
+						var pos = Random.NextFloat3Direction() * Random.NextFloat() * spawnRadius;
+						_dataSIMD.Xs[i] = pos.x;
+						_dataSIMD.Ys[i] = pos.y;
+						_dataSIMD.Zs[i] = pos.z;
+					}
+
+					break;
+				}
 				case SphereCullingMode.Uninitialized:
 				default:
 					throw new ArgumentOutOfRangeException();
@@ -104,6 +119,7 @@ namespace SphereCulling
 				case SphereCullingMode.CullJobsBurstBranchless:
 				case SphereCullingMode.CullJobsBurstBranchlessBatch:
 				case SphereCullingMode.CullJobsBurstSIMD:
+				case SphereCullingMode.CullJobsBurstSIMDShuffled:
 				{
 					_currentJobHandle.Complete();
 
@@ -247,6 +263,22 @@ namespace SphereCulling
 
 					break;
 				}
+				case SphereCullingMode.CullJobsBurstSIMDShuffled:
+				{
+					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
+
+					_currentJobHandle = new CullMultiJobSIMDShuffled
+					{
+						Output = _jobResult.AsParallelWriter(),
+						Xs = _dataSIMD.Xs,
+						Ys = _dataSIMD.Ys,
+						Zs = _dataSIMD.Zs,
+						Planes = _nativePlanes.Reinterpret<float4>(),
+					}.Schedule(count, JobBatchCount);
+
+					break;
+				}
+
 				default:
 					throw new ArgumentOutOfRangeException();
 			}

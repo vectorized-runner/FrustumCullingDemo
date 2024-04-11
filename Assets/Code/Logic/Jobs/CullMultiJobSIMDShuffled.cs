@@ -6,7 +6,7 @@ using Unity.Mathematics;
 namespace SphereCulling
 {
 	[BurstCompile]
-	public struct CullMultiJobSIMDExtra : IJobParallelForBatch
+	public struct CullMultiJobSIMDShuffled : IJobParallelForBatch
 	{
 		[ReadOnly]
 		public NativeArray<float> Xs;

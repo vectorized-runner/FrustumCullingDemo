@@ -11,5 +11,6 @@ namespace SphereCulling
 		CullJobsBurstBranchless,
 		CullJobsBurstBranchlessBatch,
 		CullJobsBurstSIMD,
+		CullJobsBurstSIMDShuffled,
 	}
 }
