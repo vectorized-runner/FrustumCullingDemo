@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -14,7 +15,7 @@ public enum SphereCullingMode
 	CullMono,
 	CullSingleJob,
 	CullMultiJob,
-	CullJobsBurst,
+	CullMultiJobBurst,
 	CullJobsBurstBranchless,
 	CullJobsBurstSIMD,
 }
@@ -52,6 +53,27 @@ public struct CullSingleJob : IJob
 }
 
 public struct CullMultiJob : IJobParallelFor
+{
+	[ReadOnly]
+	public NativeArray<float3> Positions;
+
+	[ReadOnly]
+	public NativeArray<DotsPlane> CameraPlanes;
+
+	public NativeList<float4x4>.ParallelWriter Output;
+
+	public void Execute(int index)
+	{
+		var position = Positions[index];
+		if (CullMethods.Cull(position, CameraPlanes))
+		{
+			Output.AddNoResize(float4x4.TRS(position, quaternion.identity, new float3(1, 1, 1)));
+		}
+	}
+}
+
+[BurstCompile]
+public struct CullMultiJobBurst : IJobParallelFor
 {
 	[ReadOnly]
 	public NativeArray<float3> Positions;
@@ -194,6 +216,7 @@ public class SphereCullingManager : MonoBehaviour
 			}
 			case SphereCullingMode.CullMultiJob:
 			case SphereCullingMode.CullSingleJob:
+			case SphereCullingMode.CullMultiJobBurst:
 			{
 				_dataUnmanaged.Init(count);
 
@@ -202,11 +225,6 @@ public class SphereCullingManager : MonoBehaviour
 					_dataUnmanaged.Positions[i] = Random.NextFloat3Direction() * Random.NextFloat() * spawnRadius;
 					_dataUnmanaged.Radii[i] = Constants.SphereRadius;
 				}
-
-				break;
-			}
-			case SphereCullingMode.CullJobsBurst:
-			{
 				break;
 			}
 			case SphereCullingMode.CullJobsBurstSIMD:
@@ -248,6 +266,7 @@ public class SphereCullingManager : MonoBehaviour
 			case SphereCullingMode.CullMono:
 				break;
 			case SphereCullingMode.CullSingleJob:
+			case SphereCullingMode.CullMultiJobBurst:
 			case SphereCullingMode.CullMultiJob:
 			{
 				_currentJobHandle.Complete();
@@ -257,8 +276,6 @@ public class SphereCullingManager : MonoBehaviour
 				_jobResult.Dispose();
 				break;
 			}
-			case SphereCullingMode.CullJobsBurst:
-				break;
 			case SphereCullingMode.CullJobsBurstBranchless:
 				break;
 			case SphereCullingMode.CullJobsBurstSIMD:
@@ -352,6 +369,19 @@ public class SphereCullingManager : MonoBehaviour
 				}.Schedule(count, 64);
 				break;
 			}
+			case SphereCullingMode.CullMultiJobBurst:
+			{
+				_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
+
+				_currentJobHandle = new CullMultiJobBurst
+				{
+					CameraPlanes = _nativePlanes,
+					Output = _jobResult.AsParallelWriter(),
+					Positions = _dataUnmanaged.Positions,
+				}.Schedule(count, 64);
+				break;
+			}
+			
 			case SphereCullingMode.CullJobsBurstBranchless:
 			{
 				break;
@@ -359,7 +389,6 @@ public class SphereCullingManager : MonoBehaviour
 			case SphereCullingMode.CullJobsBurstSIMD:
 				// TODO:
 				break;
-			case SphereCullingMode.CullJobsBurst:
 			default:
 				throw new ArgumentOutOfRangeException();
 		}
