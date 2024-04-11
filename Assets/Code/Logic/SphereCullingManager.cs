@@ -110,6 +110,7 @@ namespace SphereCulling
 
 	public class SphereCullingManager : MonoBehaviour
 	{
+		public int JobBatchCount = 16;
 		public SphereDemoConfig DemoConfig;
 
 		private SphereCullingMode _spawnedCullingMode = SphereCullingMode.Uninitialized;
@@ -303,7 +304,7 @@ namespace SphereCulling
 						CameraPlanes = _nativePlanes,
 						Output = _jobResult.AsParallelWriter(),
 						Positions = _dataUnmanaged.Positions,
-					}.Schedule(count, 64);
+					}.Schedule(count, JobBatchCount);
 					break;
 				}
 				case SphereCullingMode.CullMultiJobBurst:
@@ -315,7 +316,7 @@ namespace SphereCulling
 						CameraPlanes = _nativePlanes,
 						Output = _jobResult.AsParallelWriter(),
 						Positions = _dataUnmanaged.Positions,
-					}.Schedule(count, 64);
+					}.Schedule(count, JobBatchCount);
 					break;
 				}
 
@@ -328,7 +329,7 @@ namespace SphereCulling
 						Planes = _nativePlanes,
 						Output = _jobResult.AsParallelWriter(),
 						Positions = _dataUnmanaged.Positions,
-					}.Schedule(count, 64);
+					}.Schedule(count, JobBatchCount);
 					break;
 				}
 				case SphereCullingMode.CullJobsBurstSIMD:
