@@ -36,8 +36,9 @@ namespace SphereCulling
 			}
 		}
 
-		public static void CreatePlanePackets(ref NativeArray<PlanePacket4> planePackets)
+		public static NativeArray<PlanePacket4> CreatePlanePackets()
 		{
+			var planePackets = new NativeArray<PlanePacket4>(2, Allocator.TempJob);
 			var planes = new NativeArray<float4>(6, Allocator.Temp);
 			UpdateFrustumPlanes(ref planes);
 
@@ -68,6 +69,8 @@ namespace SphereCulling
 
 				planePackets[i >> 2] = p;
 			}
+
+			return planePackets;
 		}
 	}
 }
