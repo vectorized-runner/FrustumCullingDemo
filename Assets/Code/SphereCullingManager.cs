@@ -161,7 +161,8 @@ public class SphereCullingManager : MonoBehaviour
 	private Random Random;
 	private Plane[] _cameraPlanes = new Plane[Constants.PlaneCount];
 	private Camera _camera;
-
+	private JobHandle _currentJobHandle;
+	private NativeList<float4x4> _jobResult;
 
 	private void Start()
 	{
@@ -237,6 +238,35 @@ public class SphereCullingManager : MonoBehaviour
 		return true;
 	}
 
+	private void LateUpdate()
+	{
+		switch (_spawnedCullingMode)
+		{
+			case SphereCullingMode.Uninitialized:
+			case SphereCullingMode.NoCull:
+			case SphereCullingMode.CullMono:
+				break;
+			case SphereCullingMode.CullSingleJob:
+			case SphereCullingMode.CullMultiJob:
+			{
+				_currentJobHandle.Complete();
+				Graphics.RenderMeshInstanced(new RenderParams(DemoData.SphereMaterial), DemoData.SphereMesh, 0,
+					_jobResult.AsArray().Reinterpret<InstanceData>());
+
+				_jobResult.Dispose();
+				break;
+			}
+			case SphereCullingMode.CullJobsBurst:
+				break;
+			case SphereCullingMode.CullJobsBurstBranchless:
+				break;
+			case SphereCullingMode.CullJobsBurstSIMD:
+				break;
+			default:
+				throw new ArgumentOutOfRangeException();
+		}
+	}
+
 	private void Update()
 	{
 		if (_spawnedCullingMode != DemoData.CullingMode || _spawnedCount != DemoData.SphereCount)
@@ -298,34 +328,26 @@ public class SphereCullingManager : MonoBehaviour
 			}
 			case SphereCullingMode.CullSingleJob:
 			{
-				var result = new NativeList<float4x4>(count, Allocator.TempJob);
+				_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
-				new CullSingleJob
+				_currentJobHandle = new CullSingleJob
 				{
 					CameraPlanes = cameraPlanes,
-					Output = result,
+					Output = _jobResult,
 					Positions = _dataUnmanaged.Positions,
-				}.Run();
-
-				Graphics.RenderMeshInstanced(new RenderParams(material), mesh, 0,
-					result.AsArray().Reinterpret<InstanceData>());
-				result.Dispose();
+				}.Schedule();
 				break;
 			}
 			case SphereCullingMode.CullMultiJob:
 			{
-				var result = new NativeList<float4x4>(count, Allocator.TempJob);
+				_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
-				new CullMultiJob
+				_currentJobHandle = new CullMultiJob
 				{
 					CameraPlanes = cameraPlanes,
-					Output = result.AsParallelWriter(),
+					Output = _jobResult.AsParallelWriter(),
 					Positions = _dataUnmanaged.Positions,
-				}.Run(count);
-
-				Graphics.RenderMeshInstanced(new RenderParams(material), mesh, 0,
-					result.AsArray().Reinterpret<InstanceData>());
-				result.Dispose();
+				}.Schedule(count, 64);
 				break;
 			}
 			case SphereCullingMode.CullJobsBurstBranchless:
