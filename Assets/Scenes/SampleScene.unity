@@ -167,12 +167,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3e85d2d9c8f342068d407e1f68da911, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  DemoData:
+  DemoConfig:
     SphereMesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
     SphereMaterial: {fileID: 2100000, guid: 58e86e1e7befb4263a60f843c2908500, type: 2}
     SphereCount: 1000000
-    SpawnRadius: 1000
-    CullingMode: 2
+    SpawnRadius: 10000
+    CullingMode: 1
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0
