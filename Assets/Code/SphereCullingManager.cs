@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Unity.Collections;
+using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 using Random = Unity.Mathematics.Random;
@@ -11,17 +12,43 @@ public enum SphereCullingMode
 	Uninitialized,
 	NoCull,
 	CullMono,
-	CullJobs,
+	CullSingleJob,
+	CullMultiJob,
 	CullJobsBurst,
+	CullJobsBurstBranchless,
 	CullJobsBurstSIMD,
 }
-
 
 public struct InstanceData
 {
 	// This exact naming is required by Unity
 	// ReSharper disable once InconsistentNaming
 	public float4x4 objectToWorld;
+}
+
+public struct CullSingleJob : IJob
+{
+	[ReadOnly]
+	public NativeArray<float3> Positions;
+
+	[ReadOnly]
+	public NativeArray<DotsPlane> CameraPlanes;
+
+	public NativeList<float4x4> Output;
+
+	public void Execute()
+	{
+		var count = Positions.Length;
+
+		for (int i = 0; i < count; i++)
+		{
+			var position = Positions[i];
+			if (CullMethods.Cull(position, CameraPlanes))
+			{
+				Output.Add(float4x4.TRS(position, quaternion.identity, new float3(1, 1, 1)));
+			}
+		}
+	}
 }
 
 [Serializable]
@@ -37,14 +64,31 @@ public class SphereDemoData
 
 public struct SphereDataUnmanaged
 {
-	public NativeList<float3> Positions;
-	public NativeList<float> Radii;
-
-	public void Clear()
+	public NativeArray<float3> Positions;
+	public NativeArray<float> Radii;
+	public bool IsCreated;
+	
+	public void Init(int count)
 	{
-		Positions.Clear();
-		Radii.Clear();
+		Dispose();
+		Positions = new NativeArray<float3>(count, Allocator.Persistent);
+		Radii = new NativeArray<float>(count, Allocator.Persistent);
 	}
+
+	public void Dispose()
+	{
+		if (!IsCreated)
+			return;
+
+		Positions.Dispose();
+		Radii.Dispose();
+	}
+}
+
+public struct DotsPlane
+{
+	public float3 Normal;
+	public float Distance;
 }
 
 public class SphereDataManaged
@@ -59,6 +103,32 @@ public class SphereDataManaged
 	}
 }
 
+
+public static class CullMethods
+{
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool Cull(float3 position, NativeArray<DotsPlane> cameraPlanes)
+	{
+		for (int i = 0; i < Constants.PlaneCount; i++)
+		{
+			var plane = cameraPlanes[i];
+			var n = math.dot(position, plane.Normal);
+			// Distance is from plane to origin
+			var outside = Constants.SphereRadius + n <= -plane.Distance;
+			if (outside)
+				return false;
+		}
+
+		return true;
+	}
+}
+
+public static class Constants
+{
+	public const float SphereRadius = 0.5f;
+	public const int PlaneCount = 6;
+}
+
 public class SphereCullingManager : MonoBehaviour
 {
 	public SphereDemoData DemoData;
@@ -66,11 +136,11 @@ public class SphereCullingManager : MonoBehaviour
 	private SphereCullingMode _spawnedCullingMode = SphereCullingMode.Uninitialized;
 	private int _spawnedCount;
 	private SphereDataManaged _dataManaged = new();
+	private SphereDataUnmanaged _dataUnmanaged;
 	private Random Random;
-	private Plane[] _cameraPlanes = new Plane[6];
+	private Plane[] _cameraPlanes = new Plane[Constants.PlaneCount];
 	private Camera _camera;
 
-	private const float _sphereRadius = 0.5f;
 
 	private void Start()
 	{
@@ -96,12 +166,21 @@ public class SphereCullingManager : MonoBehaviour
 				for (int i = 0; i < count; i++)
 				{
 					_dataManaged.Positions.Add(Random.NextFloat3Direction() * Random.NextFloat() * spawnRadius);
-					_dataManaged.Radii.Add(_sphereRadius);
+					_dataManaged.Radii.Add(Constants.SphereRadius);
 				}
 
 				break;
 			}
-			case SphereCullingMode.CullJobs:
+			case SphereCullingMode.CullSingleJob:
+			{
+				for (int i = 0; i < count; i++)
+				{
+					_dataUnmanaged.Positions[i] = Random.NextFloat3Direction() * Random.NextFloat() * spawnRadius;
+					_dataUnmanaged.Radii[i] = Constants.SphereRadius;
+				}
+				break;
+			}
+			case SphereCullingMode.CullMultiJob:
 			{
 				break;
 			}
@@ -113,6 +192,11 @@ public class SphereCullingManager : MonoBehaviour
 			{
 				break;
 			}
+			case SphereCullingMode.CullJobsBurstBranchless:
+			{
+				break;
+			}
+			case SphereCullingMode.Uninitialized:
 			default:
 				throw new ArgumentOutOfRangeException();
 		}
@@ -121,14 +205,12 @@ public class SphereCullingManager : MonoBehaviour
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private bool Cull(float3 position)
 	{
-		const int planeCount = 6;
-
-		for (int i = 0; i < planeCount; i++)
+		for (int i = 0; i < Constants.PlaneCount; i++)
 		{
 			var plane = _cameraPlanes[i];
 			var n = math.dot(position, plane.normal);
 			// Distance is from plane to origin
-			var outside = _sphereRadius + n <= -plane.distance;
+			var outside = Constants.SphereRadius + n <= -plane.distance;
 			if (outside)
 				return false;
 		}
@@ -149,6 +231,17 @@ public class SphereCullingManager : MonoBehaviour
 		GeometryUtility.CalculateFrustumPlanes(_camera, _cameraPlanes);
 		var material = DemoData.SphereMaterial;
 		var mesh = DemoData.SphereMesh;
+		var cameraPlanes = new NativeArray<DotsPlane>(Constants.PlaneCount, Allocator.TempJob);
+		for (int i = 0; i < Constants.PlaneCount; i++)
+		{
+			cameraPlanes[i] = new DotsPlane
+			{
+				Distance = _cameraPlanes[i].distance,
+				Normal = _cameraPlanes[i].normal
+			};
+		}
+
+		var count = DemoData.SphereCount;
 
 		switch (_spawnedCullingMode)
 		{
@@ -156,7 +249,6 @@ public class SphereCullingManager : MonoBehaviour
 				break;
 			case SphereCullingMode.NoCull:
 			{
-				var count = _dataManaged.Positions.Count;
 				var matrices = new NativeArray<InstanceData>(count, Allocator.Temp);
 				for (int i = 0; i < count; i++)
 				{
@@ -171,7 +263,6 @@ public class SphereCullingManager : MonoBehaviour
 			}
 			case SphereCullingMode.CullMono:
 			{
-				var count = _dataManaged.Positions.Count;
 				var matrices = new NativeList<InstanceData>(count, Allocator.Temp);
 				for (int i = 0; i < count; i++)
 				{
@@ -183,23 +274,44 @@ public class SphereCullingManager : MonoBehaviour
 						matrices.Add(new InstanceData { objectToWorld = float4x4.TRS(position, rotation, scale) });
 					}
 				}
-				
-				Debug.Log(matrices.Length);
 
 				Graphics.RenderMeshInstanced(new RenderParams(material), mesh, 0, matrices.AsArray());
 				break;
 			}
-			case SphereCullingMode.CullJobs:
-				// TODO:
+			case SphereCullingMode.CullSingleJob:
+			{
+				var result = new NativeList<float4x4>(count, Allocator.TempJob);
+
+				new CullSingleJob
+				{
+					CameraPlanes = cameraPlanes,
+					Output = result,
+					Positions = _dataUnmanaged.Positions,
+				}.Run();
+
+				Graphics.RenderMeshInstanced(new RenderParams(material), mesh, 0,
+					result.AsArray().Reinterpret<InstanceData>());
+				result.Dispose();
 				break;
+			}
 			case SphereCullingMode.CullJobsBurst:
 				// TODO:
 				break;
+			case SphereCullingMode.CullJobsBurstBranchless:
+			{
+				break;
+			}
 			case SphereCullingMode.CullJobsBurstSIMD:
 				// TODO:
 				break;
+			case SphereCullingMode.CullMultiJob:
 			default:
 				throw new ArgumentOutOfRangeException();
+		}
+
+		// Cleanup
+		{
+			cameraPlanes.Dispose();
 		}
 	}
 }
