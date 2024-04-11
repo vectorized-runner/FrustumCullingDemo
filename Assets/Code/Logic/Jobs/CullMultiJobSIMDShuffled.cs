@@ -25,6 +25,7 @@ namespace SphereCulling
 
 		public NativeList<float4x4>.ParallelWriter Output;
 
+		// TODO: Can be further optimized by Storing Results back into a v128, single incrementing the list [ChunkEntityEnumerator]
 		// TODO: Handle count not visible by 4 case
 		public void Execute(int startIndex, int count)
 		{
@@ -34,7 +35,7 @@ namespace SphereCulling
 			var p3 = Planes[3];
 			var p4 = Planes[4];
 			var p5 = Planes[5];
-
+			
 			for (int i = 0; i < count; i += 4)
 			{
 				var idx = startIndex + i;
