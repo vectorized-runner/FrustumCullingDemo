@@ -272,6 +272,7 @@ public class SphereCullingManager : MonoBehaviour
 	{
 		if (_spawnedCullingMode != DemoData.CullingMode || _spawnedCount != DemoData.SphereCount)
 		{
+			_currentJobHandle.Complete();
 			RespawnSpheres();
 			_spawnedCullingMode = DemoData.CullingMode;
 			_spawnedCount = DemoData.SphereCount;
