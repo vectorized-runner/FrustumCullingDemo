@@ -24,7 +24,7 @@ namespace SphereCulling
 			var p1 = PlanePackets[1];
             
 			// Inside: Radius + Dot(Normal, Point) + Distance > 0
-			bool4 masks = (p0.Xs * pos.x + p0.Ys * pos.y + p0.Zs * pos.z + p0.Distances + Constants.SphereRadius > 0) |
+			bool4 masks = (p0.Xs * pos.x + p0.Ys * pos.y + p0.Zs * pos.z + p0.Distances + Constants.SphereRadius > 0) &
 			              (p1.Xs * pos.x + p1.Ys * pos.y + p1.Zs * pos.z + p1.Distances + Constants.SphereRadius > 0);
 
 			if (math.all(masks))
