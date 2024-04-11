@@ -156,9 +156,11 @@ public static class CullMethods
 		{
 			var plane = cameraPlanes[i];
 			var n = math.dot(position, plane.Normal);
+			var d = plane.Distance;
+			var r = Constants.SphereRadius;
 			// Distance is from plane to origin
-			var outside = Constants.SphereRadius + n <= -plane.Distance;
-			if (outside)
+			var inside = r + n + d > 0;
+			if (!inside)
 				return false;
 		}
 
