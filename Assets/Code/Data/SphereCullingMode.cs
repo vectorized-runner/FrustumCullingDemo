@@ -9,6 +9,7 @@ namespace SphereCulling
 		CullMultiJob,
 		CullMultiJobBurst,
 		CullJobsBurstBranchless,
+		CullJobsBurstBranchlessBatch,
 		CullJobsBurstSIMD,
 	}
 }
