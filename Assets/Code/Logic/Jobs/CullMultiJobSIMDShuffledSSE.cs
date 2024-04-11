@@ -9,7 +9,7 @@ using static Unity.Burst.Intrinsics.X86.Sse;
 namespace SphereCulling
 {
 	[BurstCompile]
-	public unsafe struct CullMultiJobSIMDShuffledExplicit : IJobParallelForBatch
+	public unsafe struct CullMultiJobSIMDShuffledSSE : IJobParallelForBatch
 	{
 		[ReadOnly]
 		public NativeArray<float> Xs;
@@ -33,21 +33,17 @@ namespace SphereCulling
 			// Count not divisible by 4 not handled here
 			Debug.Assert(count % 4 == 0);
 
-			// var planePtr = (float4*)Planes.GetUnsafeReadOnlyPtr();
-			// var p0 = load_ps(planePtr + 0);
-			// var p1 = load_ps(planePtr + 1);
-			// var p2 = load_ps(planePtr + 2);
-			// var p3 = load_ps(planePtr + 3);
-			// var p4 = load_ps(planePtr + 4);
-			// var p5 = load_ps(planePtr + 5);
+			// Mac doesn't have SSE2 Support :(
+			// I should try this on a Intel (Windows) PC
+			if (!IsSseSupported)
+				return;
+			
 			var p0 = Planes[0];
 			var p1 = Planes[1];
 			var p2 = Planes[2];
 			var p3 = Planes[3];
 			var p4 = Planes[4];
 			var p5 = Planes[5];
-
-
 			var xPtr = (float*)Xs.GetUnsafeReadOnlyPtr();
 			var yPtr = (float*)Ys.GetUnsafeReadOnlyPtr();
 			var zPtr = (float*)Zs.GetUnsafeReadOnlyPtr();
