@@ -138,6 +138,12 @@ namespace SphereCulling
 
 		private void Update()
 		{
+			if (DemoConfig.SphereCount == 0)
+			{
+				// It becomes 0 when hand-increasing the count, wait
+				return;
+			}
+			
 			if (_spawnedCullingMode != DemoConfig.CullingMode || _spawnedCount != DemoConfig.SphereCount)
 			{
 				_currentJobHandle.Complete();
