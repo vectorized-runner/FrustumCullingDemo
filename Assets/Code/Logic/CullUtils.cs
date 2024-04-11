@@ -8,13 +8,13 @@ namespace SphereCulling
 	public static class CullUtils
 	{
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static bool Cull(float3 position, NativeArray<DotsPlane> cameraPlanes)
+		public static bool Cull(float3 position, NativeArray<Plane> cameraPlanes)
 		{
 			for (int i = 0; i < Constants.PlaneCount; i++)
 			{
 				var plane = cameraPlanes[i];
-				var n = math.dot(position, plane.Normal);
-				var d = plane.Distance;
+				var n = math.dot(position, plane.normal);
+				var d = plane.distance;
 				var r = Constants.SphereRadius;
 				// Distance is from plane to origin
 				var inside = r + n + d > 0;

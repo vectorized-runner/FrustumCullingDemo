@@ -24,7 +24,7 @@ namespace SphereCulling
 		public NativeArray<float3> Positions;
 
 		[ReadOnly]
-		public NativeArray<DotsPlane> Planes;
+		public NativeArray<Plane> Planes;
 
 		public NativeList<float4x4>.ParallelWriter Output;
 
@@ -34,12 +34,12 @@ namespace SphereCulling
 
 			// Inside: R + N + D > 0
 			var result =
-				Planes[0].Distance + Constants.SphereRadius + math.dot(position, Planes[0].Normal) > 0 &&
-				Planes[1].Distance + Constants.SphereRadius + math.dot(position, Planes[1].Normal) > 0 &&
-				Planes[2].Distance + Constants.SphereRadius + math.dot(position, Planes[2].Normal) > 0 &&
-				Planes[3].Distance + Constants.SphereRadius + math.dot(position, Planes[3].Normal) > 0 &&
-				Planes[4].Distance + Constants.SphereRadius + math.dot(position, Planes[4].Normal) > 0 &&
-				Planes[5].Distance + Constants.SphereRadius + math.dot(position, Planes[5].Normal) > 0;
+				Planes[0].distance + Constants.SphereRadius + math.dot(position, Planes[0].normal) > 0 &&
+				Planes[1].distance + Constants.SphereRadius + math.dot(position, Planes[1].normal) > 0 &&
+				Planes[2].distance + Constants.SphereRadius + math.dot(position, Planes[2].normal) > 0 &&
+				Planes[3].distance + Constants.SphereRadius + math.dot(position, Planes[3].normal) > 0 &&
+				Planes[4].distance + Constants.SphereRadius + math.dot(position, Planes[4].normal) > 0 &&
+				Planes[5].distance + Constants.SphereRadius + math.dot(position, Planes[5].normal) > 0;
 
 			if (result)
 			{
@@ -108,12 +108,6 @@ namespace SphereCulling
 		}
 	}
 
-	public struct DotsPlane
-	{
-		public float3 Normal;
-		public float Distance;
-	}
-
 	public class SphereCullingManager : MonoBehaviour
 	{
 		public SphereDemoConfig DemoConfig;
@@ -123,17 +117,17 @@ namespace SphereCulling
 		private SphereDataManaged _dataManaged = new();
 		private SphereDataUnmanaged _dataUnmanaged;
 		private Random Random;
-		private Plane[] _cameraPlanes = new Plane[Constants.PlaneCount];
+		private Plane[] _managedPlanes = new Plane[Constants.PlaneCount];
 		private Camera _camera;
 		private JobHandle _currentJobHandle;
 		private NativeList<float4x4> _jobResult;
-		private NativeArray<DotsPlane> _nativePlanes;
+		private NativeArray<Plane> _nativePlanes;
 
 		private void Start()
 		{
 			Random = new Random(1);
 			_camera = Camera.main;
-			_nativePlanes = new NativeArray<DotsPlane>(Constants.PlaneCount, Allocator.Persistent);
+			_nativePlanes = new NativeArray<Plane>(Constants.PlaneCount, Allocator.Persistent);
 		}
 
 		private void RespawnSpheres()
@@ -186,7 +180,7 @@ namespace SphereCulling
 		{
 			for (int i = 0; i < Constants.PlaneCount; i++)
 			{
-				var plane = _cameraPlanes[i];
+				var plane = _managedPlanes[i];
 				var n = math.dot(position, plane.normal);
 				// Distance is from plane to origin
 				var outside = Constants.SphereRadius + n <= -plane.distance;
@@ -246,18 +240,10 @@ namespace SphereCulling
 				_spawnedCount = DemoConfig.SphereCount;
 			}
 
-			GeometryUtility.CalculateFrustumPlanes(_camera, _cameraPlanes);
+			GeometryUtility.CalculateFrustumPlanes(_camera, _managedPlanes);
 			var material = DemoConfig.SphereMaterial;
 			var mesh = DemoConfig.SphereMesh;
-
-			for (int i = 0; i < Constants.PlaneCount; i++)
-			{
-				_nativePlanes[i] = new DotsPlane
-				{
-					Distance = _cameraPlanes[i].distance,
-					Normal = _cameraPlanes[i].normal
-				};
-			}
+			_nativePlanes.CopyFrom(_managedPlanes);
 
 			var count = DemoConfig.SphereCount;
 

@@ -1,6 +1,7 @@
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace SphereCulling
 {
@@ -10,7 +11,7 @@ namespace SphereCulling
 		public NativeArray<float3> Positions;
 
 		[ReadOnly]
-		public NativeArray<DotsPlane> CameraPlanes;
+		public NativeArray<Plane> CameraPlanes;
 
 		public NativeList<float4x4>.ParallelWriter Output;
 
