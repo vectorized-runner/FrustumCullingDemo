@@ -163,13 +163,14 @@ public class SphereCullingManager : MonoBehaviour
 	private Camera _camera;
 	private JobHandle _currentJobHandle;
 	private NativeList<float4x4> _jobResult;
+	private NativeArray<DotsPlane> _nativePlanes;
 
 	private void Start()
 	{
 		Random = new Random(1);
 		_camera = Camera.main;
+		_nativePlanes = new NativeArray<DotsPlane>(Constants.PlaneCount, Allocator.Persistent);
 	}
-
 
 	private void RespawnSpheres()
 	{
@@ -279,10 +280,10 @@ public class SphereCullingManager : MonoBehaviour
 		GeometryUtility.CalculateFrustumPlanes(_camera, _cameraPlanes);
 		var material = DemoData.SphereMaterial;
 		var mesh = DemoData.SphereMesh;
-		var cameraPlanes = new NativeArray<DotsPlane>(Constants.PlaneCount, Allocator.TempJob);
+
 		for (int i = 0; i < Constants.PlaneCount; i++)
 		{
-			cameraPlanes[i] = new DotsPlane
+			_nativePlanes[i] = new DotsPlane
 			{
 				Distance = _cameraPlanes[i].distance,
 				Normal = _cameraPlanes[i].normal
@@ -332,7 +333,7 @@ public class SphereCullingManager : MonoBehaviour
 
 				_currentJobHandle = new CullSingleJob
 				{
-					CameraPlanes = cameraPlanes,
+					CameraPlanes = _nativePlanes,
 					Output = _jobResult,
 					Positions = _dataUnmanaged.Positions,
 				}.Schedule();
@@ -344,7 +345,7 @@ public class SphereCullingManager : MonoBehaviour
 
 				_currentJobHandle = new CullMultiJob
 				{
-					CameraPlanes = cameraPlanes,
+					CameraPlanes = _nativePlanes,
 					Output = _jobResult.AsParallelWriter(),
 					Positions = _dataUnmanaged.Positions,
 				}.Schedule(count, 64);
@@ -360,11 +361,6 @@ public class SphereCullingManager : MonoBehaviour
 			case SphereCullingMode.CullJobsBurst:
 			default:
 				throw new ArgumentOutOfRangeException();
-		}
-
-		// Cleanup
-		{
-			cameraPlanes.Dispose();
 		}
 	}
 }
