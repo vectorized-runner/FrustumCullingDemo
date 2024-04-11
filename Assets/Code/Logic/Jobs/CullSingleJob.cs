@@ -21,7 +21,7 @@ namespace SphereCulling
 			for (int i = 0; i < count; i++)
 			{
 				var position = Positions[i];
-				if (CullMethods.Cull(position, CameraPlanes))
+				if (CullUtils.Cull(position, CameraPlanes))
 				{
 					Output.Add(float4x4.TRS(position, quaternion.identity, new float3(1, 1, 1)));
 				}

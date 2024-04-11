@@ -108,76 +108,10 @@ namespace SphereCulling
 		}
 	}
 
-
 	public struct DotsPlane
 	{
 		public float3 Normal;
 		public float Distance;
-	}
-
-	public static class CullMethods
-	{
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static bool Cull(float3 position, NativeArray<DotsPlane> cameraPlanes)
-		{
-			for (int i = 0; i < Constants.PlaneCount; i++)
-			{
-				var plane = cameraPlanes[i];
-				var n = math.dot(position, plane.Normal);
-				var d = plane.Distance;
-				var r = Constants.SphereRadius;
-				// Distance is from plane to origin
-				var inside = r + n + d > 0;
-				if (!inside)
-					return false;
-			}
-
-			return true;
-		}
-
-
-		public static void UpdateFrustumPlanes(ref NativeArray<float4> planes)
-		{
-			var planesOOP = new Plane[Constants.PlaneCount];
-			GeometryUtility.CalculateFrustumPlanes(Camera.main, planesOOP);
-
-			for (int i = 0; i < 6; ++i)
-				planes[i] = new float4(planesOOP[i].normal, planesOOP[i].distance);
-		}
-
-		public static void CreatePlanePackets(ref NativeArray<PlanePacket4> planePackets)
-		{
-			var planes = new NativeArray<float4>(6, Allocator.Temp);
-			UpdateFrustumPlanes(ref planes);
-
-			int cullingPlaneCount = planes.Length;
-			int packetCount = (cullingPlaneCount + 3) >> 2;
-
-			for (int i = 0; i < cullingPlaneCount; i++)
-			{
-				var p = planePackets[i >> 2];
-				p.Xs[i & 3] = planes[i].x;
-				p.Ys[i & 3] = planes[i].y;
-				p.Zs[i & 3] = planes[i].z;
-				p.Distances[i & 3] = planes[i].w;
-				planePackets[i >> 2] = p;
-			}
-
-			// Populate the remaining planes with values that are always "in"
-			for (int i = cullingPlaneCount; i < 4 * packetCount; ++i)
-			{
-				var p = planePackets[i >> 2];
-				p.Xs[i & 3] = 1.0f;
-				p.Ys[i & 3] = 0.0f;
-				p.Zs[i & 3] = 0.0f;
-
-				// We want to set these distances to a very large number, but one which
-				// still allows us to add sphere radius values. Let's try 1 billion.
-				p.Distances[i & 3] = 1e9f;
-
-				planePackets[i >> 2] = p;
-			}
-		}
 	}
 
 	public class SphereCullingManager : MonoBehaviour

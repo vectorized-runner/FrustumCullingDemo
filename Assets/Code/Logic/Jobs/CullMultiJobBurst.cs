@@ -19,7 +19,7 @@ namespace SphereCulling
 		public void Execute(int index)
 		{
 			var position = Positions[index];
-			if (CullMethods.Cull(position, CameraPlanes))
+			if (CullUtils.Cull(position, CameraPlanes))
 			{
 				Output.AddNoResize(float4x4.TRS(position, quaternion.identity, new float3(1, 1, 1)));
 			}
