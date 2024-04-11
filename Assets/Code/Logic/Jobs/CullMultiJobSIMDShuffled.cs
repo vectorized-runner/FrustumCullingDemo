@@ -2,6 +2,7 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace SphereCulling
 {
@@ -25,9 +26,11 @@ namespace SphereCulling
 
 		public NativeList<float4x4>.ParallelWriter Output;
 
-		// TODO: Handle count not visible by 4 case
 		public void Execute(int startIndex, int count)
 		{
+			// Count not divisible by 4 not handled here
+			Debug.Assert(count % 4 == 0);
+			
 			var p0 = Planes[0];
 			var p1 = Planes[1];
 			var p2 = Planes[2];
