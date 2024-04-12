@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -273,6 +274,12 @@ namespace SphereCulling
 				}
 				case SphereCullingMode.CullJobsBurstExplicitSSE:
 				{
+					if (!X86.Sse2.IsSse2Supported)
+					{
+						Debug.LogError("SSE2 isn't supported on this device.");
+						break;
+					}
+					
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
 					_currentJobHandle = new CullMultiJobSIMDExplicitSSE
