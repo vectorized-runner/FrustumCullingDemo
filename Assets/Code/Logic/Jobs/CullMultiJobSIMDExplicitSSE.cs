@@ -33,7 +33,10 @@ namespace SphereCulling
 		public void Execute(int startIndex, int count)
 		{
 			if (!IsSse2Supported)
+			{
+				Debug.LogError("SSE2 isn't supported on this device.");
 				return;
+			}
 			
 			// Count not divisible by 4 not handled here
 			Debug.Assert(count % 4 == 0);

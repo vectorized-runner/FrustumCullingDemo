@@ -276,12 +276,6 @@ namespace SphereCulling
 				}
 				case SphereCullingMode.CullJobsBurstExplicitSSE:
 				{
-					if (!X86.Sse2.IsSse2Supported)
-					{
-						Debug.LogError("SSE2 isn't supported on this device.");
-						break;
-					}
-					
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
 					_currentJobHandle = new CullMultiJobSIMDExplicitSSE
@@ -297,12 +291,6 @@ namespace SphereCulling
 				}
 				case SphereCullingMode.CullJobsBurstExplicitArmNeon:
 				{
-					if (!Arm.Neon.IsNeonSupported)
-					{
-						Debug.LogError("Neon isn't supported on this device.");
-						break;
-					}
-					
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
 					_currentJobHandle = new CullMultiJobSIMDExplicitNeon
