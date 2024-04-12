@@ -70,6 +70,7 @@ namespace SphereCulling
 					break;
 				}
 				case SphereCullingMode.CullJobsBurstExplicitSSE:
+				case SphereCullingMode.CullJobsBurstSIMDShuffled:
 				{
 					_dataSIMD.Init(count);
 
@@ -120,6 +121,7 @@ namespace SphereCulling
 				case SphereCullingMode.CullJobsBurstBranchlessBatch:
 				case SphereCullingMode.CullJobsBurstSIMD:
 				case SphereCullingMode.CullJobsBurstExplicitSSE:
+				case SphereCullingMode.CullJobsBurstSIMDShuffled:
 				{
 					_currentJobHandle.Complete();
 
@@ -285,6 +287,21 @@ namespace SphereCulling
 					break;
 				}
 
+				case SphereCullingMode.CullJobsBurstSIMDShuffled:
+				{
+					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
+
+					_currentJobHandle = new CullMultiJobSIMDShuffled
+					{
+						Output = _jobResult.AsParallelWriter(),
+						Xs = _dataSIMD.Xs,
+						Ys = _dataSIMD.Ys,
+						Zs = _dataSIMD.Zs,
+						Planes = _nativePlanes.Reinterpret<float4>(),
+					}.Schedule(count, JobBatchCount);
+
+					break;
+				}
 				default:
 					throw new ArgumentOutOfRangeException();
 			}
