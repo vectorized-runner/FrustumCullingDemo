@@ -273,7 +273,7 @@ namespace SphereCulling
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
-					_currentJobHandle = new CullMultiJobSIMDShuffled
+					_currentJobHandle = new CullMultiJobSIMDExplicitSSE
 					{
 						Output = _jobResult.AsParallelWriter(),
 						Xs = _dataSIMD.Xs,
