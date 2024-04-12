@@ -9,7 +9,6 @@ using static Unity.Burst.Intrinsics.X86.Sse2;
 
 namespace SphereCulling
 {
-	// This code isn't tested yet!
 	[BurstCompile]
 	public unsafe struct CullMultiJobSIMDExplicitSSE : IJobParallelForBatch
 	{
