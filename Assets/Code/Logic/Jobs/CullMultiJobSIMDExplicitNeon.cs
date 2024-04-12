@@ -8,6 +8,7 @@ using static Unity.Burst.Intrinsics.Arm.Neon;
 
 namespace SphereCulling
 {
+	// This code isn't tested yet!
 	[BurstCompile]
 	public unsafe struct CullMultiJobSIMDExplicitNeon : IJobParallelForBatch
 	{
