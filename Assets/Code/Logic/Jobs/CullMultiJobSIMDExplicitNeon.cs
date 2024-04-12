@@ -32,7 +32,6 @@ namespace SphereCulling
 		{
 			// Count not divisible by 4 not handled here
 			Debug.Assert(count % 4 == 0);
-			Debug.Assert(IsNeonSupported);
 
 			var p0 = Planes[0];
 			var p1 = Planes[1];
