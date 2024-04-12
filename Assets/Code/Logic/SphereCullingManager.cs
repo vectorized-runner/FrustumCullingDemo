@@ -1,6 +1,5 @@
 using System;
 using System.Runtime.CompilerServices;
-using Unity.Burst.Intrinsics;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -19,16 +18,15 @@ namespace SphereCulling
 		private SphereDataManaged _dataManaged = new();
 		private SphereDataUnmanaged _dataUnmanaged;
 		private SphereDataSIMD _dataSIMD;
-		private Random Random;
 		private Plane[] _managedPlanes = new Plane[Constants.PlaneCount];
 		private Camera _camera;
 		private JobHandle _currentJobHandle;
 		private NativeList<float4x4> _jobResult;
 		private NativeArray<Plane> _nativePlanes;
+		private Random _random;
 
 		private void Start()
 		{
-			Random = new Random(1);
 			_camera = Camera.main;
 			_nativePlanes = new NativeArray<Plane>(Constants.PlaneCount, Allocator.Persistent);
 		}
@@ -37,6 +35,7 @@ namespace SphereCulling
 		{
 			var count = DemoConfig.SphereCount;
 			var spawnRadius = DemoConfig.SpawnRadius;
+			_random = new Random(1);
 
 			switch (DemoConfig.CullingMode)
 			{
@@ -47,7 +46,7 @@ namespace SphereCulling
 
 					for (int i = 0; i < count; i++)
 					{
-						_dataManaged.Positions.Add(Random.NextFloat3Direction() * Random.NextFloat() * spawnRadius);
+						_dataManaged.Positions.Add(_random.NextFloat3Direction() * _random.NextFloat() * spawnRadius);
 						_dataManaged.Radii.Add(Constants.SphereRadius);
 					}
 
@@ -64,7 +63,7 @@ namespace SphereCulling
 
 					for (int i = 0; i < count; i++)
 					{
-						_dataUnmanaged.Positions[i] = Random.NextFloat3Direction() * Random.NextFloat() * spawnRadius;
+						_dataUnmanaged.Positions[i] = _random.NextFloat3Direction() * _random.NextFloat() * spawnRadius;
 						_dataUnmanaged.Radii[i] = Constants.SphereRadius;
 					}
 
@@ -78,7 +77,7 @@ namespace SphereCulling
 
 					for (int i = 0; i < count; i++)
 					{
-						var pos = Random.NextFloat3Direction() * Random.NextFloat() * spawnRadius;
+						var pos = _random.NextFloat3Direction() * _random.NextFloat() * spawnRadius;
 						_dataSIMD.Xs[i] = pos.x;
 						_dataSIMD.Ys[i] = pos.y;
 						_dataSIMD.Zs[i] = pos.z;
