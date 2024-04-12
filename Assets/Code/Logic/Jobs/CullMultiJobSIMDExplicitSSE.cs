@@ -5,11 +5,12 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 using static Unity.Burst.Intrinsics.X86.Sse;
+using static Unity.Burst.Intrinsics.X86.Sse2;
 
 namespace SphereCulling
 {
 	[BurstCompile]
-	public unsafe struct CullMultiJobSIMDShuffledSSE : IJobParallelForBatch
+	public unsafe struct CullMultiJobSIMDExplicitSSE : IJobParallelForBatch
 	{
 		[ReadOnly]
 		public NativeArray<float> Xs;
@@ -35,7 +36,7 @@ namespace SphereCulling
 
 			// Mac doesn't have SSE2 Support :(
 			// I should try this on a Intel (Windows) PC
-			if (!IsSseSupported)
+			if (!IsSse2Supported)
 				return;
 			
 			var p0 = Planes[0];

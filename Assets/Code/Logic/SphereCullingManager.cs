@@ -69,7 +69,7 @@ namespace SphereCulling
 
 					break;
 				}
-				case SphereCullingMode.CullJobsBurstSIMDShuffled:
+				case SphereCullingMode.CullJobsBurstExplicitSSE:
 				{
 					_dataSIMD.Init(count);
 
@@ -119,7 +119,7 @@ namespace SphereCulling
 				case SphereCullingMode.CullJobsBurstBranchless:
 				case SphereCullingMode.CullJobsBurstBranchlessBatch:
 				case SphereCullingMode.CullJobsBurstSIMD:
-				case SphereCullingMode.CullJobsBurstSIMDShuffled:
+				case SphereCullingMode.CullJobsBurstExplicitSSE:
 				{
 					_currentJobHandle.Complete();
 
@@ -269,7 +269,7 @@ namespace SphereCulling
 
 					break;
 				}
-				case SphereCullingMode.CullJobsBurstSIMDShuffled:
+				case SphereCullingMode.CullJobsBurstExplicitSSE:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
