@@ -9,6 +9,7 @@ using static Unity.Burst.Intrinsics.X86.Sse2;
 
 namespace SphereCulling
 {
+	// This code isn't tested yet!
 	[BurstCompile]
 	public unsafe struct CullMultiJobSIMDExplicitSSE : IJobParallelForBatch
 	{
@@ -31,13 +32,14 @@ namespace SphereCulling
 
 		public void Execute(int startIndex, int count)
 		{
+			if (!IsSse2Supported)
+			{
+				Debug.LogError("SSE2 isn't supported on this device.");
+				return;
+			}
+			
 			// Count not divisible by 4 not handled here
 			Debug.Assert(count % 4 == 0);
-
-			
-			// Mac doesn't have SSE2 Support :(
-			// I should try this on a Intel (Windows) PC
-			Debug.Assert(IsSse2Supported);
 			
 			var p0 = Planes[0];
 			var p1 = Planes[1];
