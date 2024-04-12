@@ -71,6 +71,7 @@ namespace SphereCulling
 					break;
 				}
 				case SphereCullingMode.CullJobsBurstExplicitSSE:
+				case SphereCullingMode.CullJobsBurstExplicitArmNeon:
 				case SphereCullingMode.CullJobsBurstSIMDShuffled:
 				{
 					_dataSIMD.Init(count);
@@ -123,6 +124,7 @@ namespace SphereCulling
 				case SphereCullingMode.CullJobsBurstSIMD:
 				case SphereCullingMode.CullJobsBurstExplicitSSE:
 				case SphereCullingMode.CullJobsBurstSIMDShuffled:
+				case SphereCullingMode.CullJobsBurstExplicitArmNeon:
 				{
 					_currentJobHandle.Complete();
 
@@ -293,7 +295,27 @@ namespace SphereCulling
 
 					break;
 				}
+				case SphereCullingMode.CullJobsBurstExplicitArmNeon:
+				{
+					if (!Arm.Neon.IsNeonSupported)
+					{
+						Debug.LogError("Neon isn't supported on this device.");
+						break;
+					}
+					
+					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
+					_currentJobHandle = new CullMultiJobSIMDExplicitNeon
+					{
+						Output = _jobResult.AsParallelWriter(),
+						Xs = _dataSIMD.Xs,
+						Ys = _dataSIMD.Ys,
+						Zs = _dataSIMD.Zs,
+						Planes = _nativePlanes.Reinterpret<float4>(),
+					}.Schedule(count, JobBatchCount);
+					
+					break;
+				}
 				case SphereCullingMode.CullJobsBurstSIMDShuffled:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);

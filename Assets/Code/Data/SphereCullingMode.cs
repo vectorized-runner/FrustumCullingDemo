@@ -13,5 +13,6 @@ namespace SphereCulling
 		CullJobsBurstSIMD,
 		CullJobsBurstSIMDShuffled,
 		CullJobsBurstExplicitSSE,
+		CullJobsBurstExplicitArmNeon,
 	}
 }
