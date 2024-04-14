@@ -3,7 +3,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace SphereCulling
+namespace FrustumCulling
 {
 	public struct CullMultiJob : IJobParallelFor
 	{
@@ -18,7 +18,7 @@ namespace SphereCulling
 		public void Execute(int index)
 		{
 			var position = Positions[index];
-			if (CullUtils.Cull(position, CameraPlanes))
+			if (FrustumCullHelper.Cull(position, CameraPlanes))
 			{
 				Output.AddNoResize(float4x4.TRS(position, quaternion.identity, new float3(1, 1, 1)));
 			}

@@ -1,4 +1,4 @@
-namespace SphereCulling
+namespace FrustumCulling
 {
 	public static class Constants
 	{

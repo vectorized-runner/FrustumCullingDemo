@@ -1,6 +1,6 @@
 using Unity.Mathematics;
 
-namespace SphereCulling
+namespace FrustumCulling
 {
 	public struct PlanePacket4
 	{

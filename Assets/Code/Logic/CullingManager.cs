@@ -6,14 +6,14 @@ using Unity.Mathematics;
 using UnityEngine;
 using Random = Unity.Mathematics.Random;
 
-namespace SphereCulling
+namespace FrustumCulling
 {
-	public class SphereCullingManager : MonoBehaviour
+	public class CullingManager : MonoBehaviour
 	{
 		public int JobBatchCount = 32;
-		public SphereDemoConfig DemoConfig;
+		public DemoConfig DemoConfig;
 
-		private SphereCullingMode _spawnedCullingMode = SphereCullingMode.Uninitialized;
+		private CullingMode _spawnedCullingMode = CullingMode.Uninitialized;
 		private int _spawnedCount;
 		private SphereDataManaged _dataManaged = new();
 		private SphereDataUnmanaged _dataUnmanaged;
@@ -39,8 +39,8 @@ namespace SphereCulling
 
 			switch (DemoConfig.CullingMode)
 			{
-				case SphereCullingMode.NoCull:
-				case SphereCullingMode.CullMono:
+				case CullingMode.NoCull:
+				case CullingMode.CullMono:
 				{
 					_dataManaged.Clear();
 
@@ -52,12 +52,12 @@ namespace SphereCulling
 
 					break;
 				}
-				case SphereCullingMode.CullMultiJob:
-				case SphereCullingMode.CullSingleJob:
-				case SphereCullingMode.CullMultiJobBurst:
-				case SphereCullingMode.CullJobsBurstBranchless:
-				case SphereCullingMode.CullJobsBurstBranchlessBatch:
-				case SphereCullingMode.CullJobsBurstSIMD:
+				case CullingMode.CullMultiJob:
+				case CullingMode.CullSingleJob:
+				case CullingMode.CullMultiJobBurst:
+				case CullingMode.CullJobsBurstBranchless:
+				case CullingMode.CullJobsBurstBranchlessBatch:
+				case CullingMode.CullJobsBurstSIMD:
 				{
 					_dataUnmanaged.Init(count);
 
@@ -69,9 +69,9 @@ namespace SphereCulling
 
 					break;
 				}
-				case SphereCullingMode.CullJobsBurstExplicitSSE:
-				case SphereCullingMode.CullJobsBurstExplicitArmNeon:
-				case SphereCullingMode.CullJobsBurstSIMDShuffled:
+				case CullingMode.CullJobsBurstExplicitSSE:
+				case CullingMode.CullJobsBurstExplicitArmNeon:
+				case CullingMode.CullJobsBurstSIMDShuffled:
 				{
 					_dataSIMD.Init(count);
 
@@ -85,7 +85,7 @@ namespace SphereCulling
 
 					break;
 				}
-				case SphereCullingMode.Uninitialized:
+				case CullingMode.Uninitialized:
 				default:
 					throw new ArgumentOutOfRangeException();
 			}
@@ -111,19 +111,19 @@ namespace SphereCulling
 		{
 			switch (_spawnedCullingMode)
 			{
-				case SphereCullingMode.Uninitialized:
-				case SphereCullingMode.NoCull:
-				case SphereCullingMode.CullMono:
+				case CullingMode.Uninitialized:
+				case CullingMode.NoCull:
+				case CullingMode.CullMono:
 					break;
-				case SphereCullingMode.CullSingleJob:
-				case SphereCullingMode.CullMultiJobBurst:
-				case SphereCullingMode.CullMultiJob:
-				case SphereCullingMode.CullJobsBurstBranchless:
-				case SphereCullingMode.CullJobsBurstBranchlessBatch:
-				case SphereCullingMode.CullJobsBurstSIMD:
-				case SphereCullingMode.CullJobsBurstExplicitSSE:
-				case SphereCullingMode.CullJobsBurstSIMDShuffled:
-				case SphereCullingMode.CullJobsBurstExplicitArmNeon:
+				case CullingMode.CullSingleJob:
+				case CullingMode.CullMultiJobBurst:
+				case CullingMode.CullMultiJob:
+				case CullingMode.CullJobsBurstBranchless:
+				case CullingMode.CullJobsBurstBranchlessBatch:
+				case CullingMode.CullJobsBurstSIMD:
+				case CullingMode.CullJobsBurstExplicitSSE:
+				case CullingMode.CullJobsBurstSIMDShuffled:
+				case CullingMode.CullJobsBurstExplicitArmNeon:
 				{
 					_currentJobHandle.Complete();
 
@@ -165,9 +165,9 @@ namespace SphereCulling
 
 			switch (_spawnedCullingMode)
 			{
-				case SphereCullingMode.Uninitialized:
+				case CullingMode.Uninitialized:
 					break;
-				case SphereCullingMode.NoCull:
+				case CullingMode.NoCull:
 				{
 					var matrices = new NativeArray<InstanceData>(count, Allocator.Temp);
 					for (int i = 0; i < count; i++)
@@ -181,7 +181,7 @@ namespace SphereCulling
 					Graphics.RenderMeshInstanced(new RenderParams(material), mesh, 0, matrices);
 					break;
 				}
-				case SphereCullingMode.CullMono:
+				case CullingMode.CullMono:
 				{
 					var matrices = new NativeList<InstanceData>(count, Allocator.Temp);
 					for (int i = 0; i < count; i++)
@@ -198,7 +198,7 @@ namespace SphereCulling
 					Graphics.RenderMeshInstanced(new RenderParams(material), mesh, 0, matrices.AsArray());
 					break;
 				}
-				case SphereCullingMode.CullSingleJob:
+				case CullingMode.CullSingleJob:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
@@ -210,7 +210,7 @@ namespace SphereCulling
 					}.Schedule();
 					break;
 				}
-				case SphereCullingMode.CullMultiJob:
+				case CullingMode.CullMultiJob:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
@@ -222,7 +222,7 @@ namespace SphereCulling
 					}.Schedule(count, JobBatchCount);
 					break;
 				}
-				case SphereCullingMode.CullMultiJobBurst:
+				case CullingMode.CullMultiJobBurst:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
@@ -235,7 +235,7 @@ namespace SphereCulling
 					break;
 				}
 
-				case SphereCullingMode.CullJobsBurstBranchless:
+				case CullingMode.CullJobsBurstBranchless:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
@@ -247,7 +247,7 @@ namespace SphereCulling
 					}.Schedule(count, JobBatchCount);
 					break;
 				}
-				case SphereCullingMode.CullJobsBurstBranchlessBatch:
+				case CullingMode.CullJobsBurstBranchlessBatch:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
@@ -260,7 +260,7 @@ namespace SphereCulling
 
 					break;
 				}
-				case SphereCullingMode.CullJobsBurstSIMD:
+				case CullingMode.CullJobsBurstSIMD:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
@@ -268,12 +268,12 @@ namespace SphereCulling
 					{
 						Output = _jobResult.AsParallelWriter(),
 						Positions = _dataUnmanaged.Positions,
-						PlanePackets = CullUtils.CreatePlanePackets()
+						PlanePackets = FrustumCullHelper.CreatePlanePackets()
 					}.Schedule(count, JobBatchCount);
 
 					break;
 				}
-				case SphereCullingMode.CullJobsBurstExplicitSSE:
+				case CullingMode.CullJobsBurstExplicitSSE:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
@@ -288,7 +288,7 @@ namespace SphereCulling
 
 					break;
 				}
-				case SphereCullingMode.CullJobsBurstExplicitArmNeon:
+				case CullingMode.CullJobsBurstExplicitArmNeon:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
@@ -303,7 +303,7 @@ namespace SphereCulling
 					
 					break;
 				}
-				case SphereCullingMode.CullJobsBurstSIMDShuffled:
+				case CullingMode.CullJobsBurstSIMDShuffled:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 

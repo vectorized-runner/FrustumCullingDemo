@@ -1,7 +1,7 @@
 using Unity.Collections;
 using Unity.Mathematics;
 
-namespace SphereCulling
+namespace FrustumCulling
 {
 	public struct SphereDataUnmanaged
 	{

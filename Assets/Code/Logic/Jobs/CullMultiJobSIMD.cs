@@ -3,7 +3,7 @@ using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 
-namespace SphereCulling
+namespace FrustumCulling
 {
 	[BurstCompile]
 	public struct CullMultiJobSIMD : IJobParallelFor

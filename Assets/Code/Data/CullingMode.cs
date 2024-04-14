@@ -1,6 +1,6 @@
-namespace SphereCulling
+namespace FrustumCulling
 {
-	public enum SphereCullingMode
+	public enum CullingMode
 	{
 		Uninitialized,
 		NoCull,

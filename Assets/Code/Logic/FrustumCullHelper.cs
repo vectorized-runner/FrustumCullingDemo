@@ -3,9 +3,9 @@ using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace SphereCulling
+namespace FrustumCulling
 {
-	public static class CullUtils
+	public static class FrustumCullHelper
 	{
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool Cull(float3 position, NativeArray<Plane> cameraPlanes)

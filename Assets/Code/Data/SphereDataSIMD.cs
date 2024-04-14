@@ -1,6 +1,6 @@
 using Unity.Collections;
 
-namespace SphereCulling
+namespace FrustumCulling
 {
 	public struct SphereDataSIMD
 	{

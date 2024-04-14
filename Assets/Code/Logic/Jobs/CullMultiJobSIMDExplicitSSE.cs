@@ -7,7 +7,7 @@ using UnityEngine;
 using static Unity.Burst.Intrinsics.X86.Sse;
 using static Unity.Burst.Intrinsics.X86.Sse2;
 
-namespace SphereCulling
+namespace FrustumCulling
 {
 	[BurstCompile]
 	public unsafe struct CullMultiJobSIMDExplicitSSE : IJobParallelForBatch
