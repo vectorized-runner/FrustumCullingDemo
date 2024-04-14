@@ -9,7 +9,7 @@ using static Unity.Burst.Intrinsics.Arm.Neon;
 namespace FrustumCulling
 {
 	[BurstCompile]
-	public unsafe struct CullMultiJobSIMDExplicitNeon : IJobParallelForBatch
+	public unsafe struct CullBatchJobArmNeon : IJobParallelForBatch
 	{
 		[ReadOnly]
 		public NativeArray<float> Xs;

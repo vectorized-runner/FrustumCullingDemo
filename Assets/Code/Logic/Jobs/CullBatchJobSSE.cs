@@ -10,7 +10,7 @@ using static Unity.Burst.Intrinsics.X86.Sse2;
 namespace FrustumCulling
 {
 	[BurstCompile]
-	public unsafe struct CullMultiJobSIMDExplicitSSE : IJobParallelForBatch
+	public unsafe struct CullBatchJobSSE : IJobParallelForBatch
 	{
 		[ReadOnly]
 		public NativeArray<float> Xs;

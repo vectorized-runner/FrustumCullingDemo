@@ -7,7 +7,7 @@ using UnityEngine;
 namespace FrustumCulling
 {
 	[BurstCompile]
-	public struct CullMultiJobSIMDShuffled : IJobParallelForBatch
+	public struct CullBatchJobSIMDSoA : IJobParallelForBatch
 	{
 		[ReadOnly]
 		public NativeArray<float> Xs;

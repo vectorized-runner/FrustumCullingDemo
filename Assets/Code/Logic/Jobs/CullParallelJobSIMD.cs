@@ -6,7 +6,7 @@ using Unity.Mathematics;
 namespace FrustumCulling
 {
 	[BurstCompile]
-	public struct CullMultiJobSIMD : IJobParallelFor
+	public struct CullParallelJobSIMD : IJobParallelFor
 	{
 		[ReadOnly]
 		public NativeArray<float3> Positions;

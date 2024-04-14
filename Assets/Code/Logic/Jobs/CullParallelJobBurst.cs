@@ -1,3 +1,4 @@
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -5,7 +6,8 @@ using UnityEngine;
 
 namespace FrustumCulling
 {
-	public struct CullMultiJob : IJobParallelFor
+	[BurstCompile]
+	public struct CullParallelJobBurst : IJobParallelFor
 	{
 		[ReadOnly]
 		public NativeArray<float3> Positions;
