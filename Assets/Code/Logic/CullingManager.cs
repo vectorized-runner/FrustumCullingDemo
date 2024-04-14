@@ -40,7 +40,7 @@ namespace FrustumCulling
 			switch (DemoConfig.CullingMode)
 			{
 				case CullingMode.NoCull:
-				case CullingMode.CullMono:
+				case CullingMode.Mono:
 				{
 					_dataManaged.Clear();
 
@@ -52,12 +52,12 @@ namespace FrustumCulling
 
 					break;
 				}
-				case CullingMode.CullMultiJob:
-				case CullingMode.CullSingleJob:
-				case CullingMode.CullMultiJobBurst:
-				case CullingMode.CullJobsBurstBranchless:
-				case CullingMode.CullJobsBurstBranchlessBatch:
-				case CullingMode.CullJobsBurstSIMD:
+				case CullingMode.ParallelJob:
+				case CullingMode.SingleJob:
+				case CullingMode.ParallelJobBurst:
+				case CullingMode.ParallelJobBurstBranchless:
+				case CullingMode.BatchJobBurstBranchless:
+				case CullingMode.ParallelJobBurstSIMD:
 				{
 					_dataUnmanaged.Init(count);
 
@@ -69,9 +69,9 @@ namespace FrustumCulling
 
 					break;
 				}
-				case CullingMode.CullJobsBurstExplicitSSE:
-				case CullingMode.CullJobsBurstExplicitArmNeon:
-				case CullingMode.CullJobsBurstSIMDShuffled:
+				case CullingMode.ParallelJobBurstSSE:
+				case CullingMode.ParallelJobBurstArmNeon:
+				case CullingMode.ParallelJobBurstSIMDSoA:
 				{
 					_dataSIMD.Init(count);
 
@@ -113,17 +113,17 @@ namespace FrustumCulling
 			{
 				case CullingMode.Uninitialized:
 				case CullingMode.NoCull:
-				case CullingMode.CullMono:
+				case CullingMode.Mono:
 					break;
-				case CullingMode.CullSingleJob:
-				case CullingMode.CullMultiJobBurst:
-				case CullingMode.CullMultiJob:
-				case CullingMode.CullJobsBurstBranchless:
-				case CullingMode.CullJobsBurstBranchlessBatch:
-				case CullingMode.CullJobsBurstSIMD:
-				case CullingMode.CullJobsBurstExplicitSSE:
-				case CullingMode.CullJobsBurstSIMDShuffled:
-				case CullingMode.CullJobsBurstExplicitArmNeon:
+				case CullingMode.SingleJob:
+				case CullingMode.ParallelJobBurst:
+				case CullingMode.ParallelJob:
+				case CullingMode.ParallelJobBurstBranchless:
+				case CullingMode.BatchJobBurstBranchless:
+				case CullingMode.ParallelJobBurstSIMD:
+				case CullingMode.ParallelJobBurstSSE:
+				case CullingMode.ParallelJobBurstSIMDSoA:
+				case CullingMode.ParallelJobBurstArmNeon:
 				{
 					_currentJobHandle.Complete();
 
@@ -181,7 +181,7 @@ namespace FrustumCulling
 					Graphics.RenderMeshInstanced(new RenderParams(material), mesh, 0, matrices);
 					break;
 				}
-				case CullingMode.CullMono:
+				case CullingMode.Mono:
 				{
 					var matrices = new NativeList<InstanceData>(count, Allocator.Temp);
 					for (int i = 0; i < count; i++)
@@ -198,7 +198,7 @@ namespace FrustumCulling
 					Graphics.RenderMeshInstanced(new RenderParams(material), mesh, 0, matrices.AsArray());
 					break;
 				}
-				case CullingMode.CullSingleJob:
+				case CullingMode.SingleJob:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
@@ -210,11 +210,11 @@ namespace FrustumCulling
 					}.Schedule();
 					break;
 				}
-				case CullingMode.CullMultiJob:
+				case CullingMode.ParallelJob:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
-					_currentJobHandle = new CullMultiJob
+					_currentJobHandle = new CullParallelJob
 					{
 						CameraPlanes = _nativePlanes,
 						Output = _jobResult.AsParallelWriter(),
@@ -222,11 +222,11 @@ namespace FrustumCulling
 					}.Schedule(count, JobBatchCount);
 					break;
 				}
-				case CullingMode.CullMultiJobBurst:
+				case CullingMode.ParallelJobBurst:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
-					_currentJobHandle = new CullMultiJobBurst
+					_currentJobHandle = new CullParallelJobBurst
 					{
 						CameraPlanes = _nativePlanes,
 						Output = _jobResult.AsParallelWriter(),
@@ -235,11 +235,11 @@ namespace FrustumCulling
 					break;
 				}
 
-				case CullingMode.CullJobsBurstBranchless:
+				case CullingMode.ParallelJobBurstBranchless:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
-					_currentJobHandle = new CullMultiJobBurstBranchless
+					_currentJobHandle = new CullParallelJobBurstBranchless
 					{
 						Planes = _nativePlanes,
 						Output = _jobResult.AsParallelWriter(),
@@ -247,11 +247,11 @@ namespace FrustumCulling
 					}.Schedule(count, JobBatchCount);
 					break;
 				}
-				case CullingMode.CullJobsBurstBranchlessBatch:
+				case CullingMode.BatchJobBurstBranchless:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
-					_currentJobHandle = new CullMultiJobBurstBranchlessBatch
+					_currentJobHandle = new CullBatchJobBurstBranchless
 					{
 						Planes = _nativePlanes,
 						Output = _jobResult.AsParallelWriter(),
@@ -260,11 +260,11 @@ namespace FrustumCulling
 
 					break;
 				}
-				case CullingMode.CullJobsBurstSIMD:
+				case CullingMode.ParallelJobBurstSIMD:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
-					_currentJobHandle = new CullMultiJobSIMD
+					_currentJobHandle = new CullParallelJobSIMD
 					{
 						Output = _jobResult.AsParallelWriter(),
 						Positions = _dataUnmanaged.Positions,
@@ -273,11 +273,11 @@ namespace FrustumCulling
 
 					break;
 				}
-				case CullingMode.CullJobsBurstExplicitSSE:
+				case CullingMode.ParallelJobBurstSSE:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
-					_currentJobHandle = new CullMultiJobSIMDExplicitSSE
+					_currentJobHandle = new CullBatchJobSSE
 					{
 						Output = _jobResult.AsParallelWriter(),
 						Xs = _dataSIMD.Xs,
@@ -288,11 +288,11 @@ namespace FrustumCulling
 
 					break;
 				}
-				case CullingMode.CullJobsBurstExplicitArmNeon:
+				case CullingMode.ParallelJobBurstArmNeon:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
-					_currentJobHandle = new CullMultiJobSIMDExplicitNeon
+					_currentJobHandle = new CullBatchJobArmNeon
 					{
 						Output = _jobResult.AsParallelWriter(),
 						Xs = _dataSIMD.Xs,
@@ -303,11 +303,11 @@ namespace FrustumCulling
 					
 					break;
 				}
-				case CullingMode.CullJobsBurstSIMDShuffled:
+				case CullingMode.ParallelJobBurstSIMDSoA:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
-					_currentJobHandle = new CullMultiJobSIMDShuffled
+					_currentJobHandle = new CullBatchJobSIMDSoA
 					{
 						Output = _jobResult.AsParallelWriter(),
 						Xs = _dataSIMD.Xs,
