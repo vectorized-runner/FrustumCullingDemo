@@ -24,6 +24,15 @@ namespace FrustumCulling
 		[ReadOnly]
 		public NativeArray<float> AABBCenterZs;
 		
+		[ReadOnly]
+		public NativeArray<float> AABBExtentXs;
+
+		[ReadOnly]
+		public NativeArray<float> AABBExtentYs;
+
+		[ReadOnly]
+		public NativeArray<float> AABBExtentZs;
+		
 		public NativeList<float4x4>.ParallelWriter Output;
 
 		public void Execute(int startIndex, int count)
@@ -43,14 +52,17 @@ namespace FrustumCulling
 				var cxs = AABBCenterXs.ReinterpretLoad<float4>(idx);
 				var cys = AABBCenterYs.ReinterpretLoad<float4>(idx);
 				var czs = AABBCenterZs.ReinterpretLoad<float4>(idx);
+				var exs = AABBExtentXs.ReinterpretLoad<float4>(idx);
+				var eys = AABBExtentYs.ReinterpretLoad<float4>(idx);
+				var ezs = AABBExtentZs.ReinterpretLoad<float4>(idx);
 
 				// Tests 4 AABB against 6 Planes
-				bool4 mask = p0.x * cxs + p0.y * cys + p0.z * czs + p0.w + radii > 0.0f &
-				             p1.x * cxs + p1.y * cys + p1.z * czs + p1.w + radii > 0.0f &
-				             p2.x * cxs + p2.y * cys + p2.z * czs + p2.w + radii > 0.0f &
-				             p3.x * cxs + p3.y * cys + p3.z * czs + p3.w + radii > 0.0f &
-				             p4.x * cxs + p4.y * cys + p4.z * czs + p4.w + radii > 0.0f &
-				             p5.x * cxs + p5.y * cys + p5.z * czs + p5.w + radii > 0.0f;
+				bool4 mask = p0.x * cxs + p0.y * cys + p0.z * czs + p0.w + math.abs(p0.x) * exs + math.abs(p0.y) * eys + math.abs(p0.z) * ezs > 0.0f &
+				             p1.x * cxs + p1.y * cys + p1.z * czs + p1.w + math.abs(p1.x) * exs + math.abs(p1.y) * eys + math.abs(p1.z) * ezs > 0.0f &
+				             p2.x * cxs + p2.y * cys + p2.z * czs + p2.w + math.abs(p2.x) * exs + math.abs(p2.y) * eys + math.abs(p2.z) * ezs > 0.0f &
+				             p3.x * cxs + p3.y * cys + p3.z * czs + p3.w + math.abs(p3.x) * exs + math.abs(p3.y) * eys + math.abs(p3.z) * ezs > 0.0f &
+				             p4.x * cxs + p4.y * cys + p4.z * czs + p4.w + math.abs(p4.x) * exs + math.abs(p4.y) * eys + math.abs(p4.z) * ezs > 0.0f &
+				             p5.x * cxs + p5.y * cys + p5.z * czs + p5.w + math.abs(p5.x) * exs + math.abs(p5.y) * eys + math.abs(p5.z) * ezs > 0.0f;
 
 				// Normally you'd do reinterpretStore to visibility mask, but we're doing culling and adding at the same time.
 				if (mask.x)

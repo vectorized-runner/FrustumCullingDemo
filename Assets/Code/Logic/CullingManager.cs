@@ -17,6 +17,7 @@ namespace FrustumCulling
 		private SphereDataManaged _dataManaged = new();
 		private SphereDataUnmanaged _dataUnmanaged;
 		private AABBDataUnmanaged _aabbData;
+		private AABBDataSIMD _aabbDataSIMD;
 		private SphereDataSIMD _dataSIMD;
 		private Plane[] _managedPlanes = new Plane[Constants.PlaneCount];
 		private Camera _camera;
@@ -102,6 +103,24 @@ namespace FrustumCulling
 
 					break;
 				}
+				case CullingMode.AABBCullSIMDSoA:
+				{
+					_aabbDataSIMD.Init(count);
+
+					for (int i = 0; i < count; i++)
+					{
+						var pos = _random.NextFloat3Direction() * _random.NextFloat() * spawnRadius;
+						_aabbDataSIMD.Positions[i] = pos;
+						_aabbDataSIMD.AABBCenterXs[i] = pos.x;
+						_aabbDataSIMD.AABBCenterYs[i] = pos.y;
+						_aabbDataSIMD.AABBCenterZs[i] = pos.z;
+						_aabbDataSIMD.AABBExtentXs[i] = Constants.SphereRadius;
+						_aabbDataSIMD.AABBExtentYs[i] = Constants.SphereRadius;
+						_aabbDataSIMD.AABBExtentZs[i] = Constants.SphereRadius;
+					}
+
+					break;
+				}
 				case CullingMode.Uninitialized:
 				default:
 					throw new ArgumentOutOfRangeException();
@@ -125,6 +144,7 @@ namespace FrustumCulling
 				case CullingMode.ParallelJobBurstSSE:
 				case CullingMode.ParallelJobBurstSIMDSoA:
 				case CullingMode.ParallelJobBurstArmNeon:
+				case CullingMode.AABBCullSIMDSoA:
 				case CullingMode.AABBCullSIMD:
 				{
 					_currentJobHandle.Complete();
@@ -330,6 +350,25 @@ namespace FrustumCulling
 						AABBs = _aabbData.AABBs,
 						Positions = _aabbData.Positions,
 						Planes = FrustumCullHelper.CreatePlanePackets(),
+					}.Schedule(count, JobBatchCount);
+
+					break;
+				}
+				case CullingMode.AABBCullSIMDSoA:
+				{
+					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
+
+					_currentJobHandle = new CullAABBParallelJobBurstSIMDSoA
+					{
+						Output = _jobResult.AsParallelWriter(),
+						AABBCenterXs = _aabbDataSIMD.AABBCenterXs,
+						AABBCenterYs = _aabbDataSIMD.AABBCenterYs,
+						AABBCenterZs = _aabbDataSIMD.AABBCenterZs,
+						AABBExtentXs = _aabbDataSIMD.AABBExtentXs,
+						AABBExtentYs = _aabbDataSIMD.AABBExtentYs,
+						AABBExtentZs = _aabbDataSIMD.AABBExtentZs,
+						Positions = _aabbData.Positions,
+						Planes = _nativePlanes.Reinterpret<float4>(),
 					}.Schedule(count, JobBatchCount);
 
 					break;
