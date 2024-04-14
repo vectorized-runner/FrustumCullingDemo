@@ -39,6 +39,9 @@ namespace FrustumCulling
 
 		public void Execute(int startIndex, int count)
 		{
+			if (!IsNeonSupported)
+				return;
+			
 			Debug.Assert(count % 4 == 0);
 
 			var p0 = Planes[0];

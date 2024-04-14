@@ -369,7 +369,7 @@ namespace FrustumCulling
 						AABBExtentXs = _aabbDataSIMD.AABBExtentXs,
 						AABBExtentYs = _aabbDataSIMD.AABBExtentYs,
 						AABBExtentZs = _aabbDataSIMD.AABBExtentZs,
-						Positions = _aabbData.Positions,
+						Positions = _aabbDataSIMD.Positions,
 						Planes = _nativePlanes.Reinterpret<float4>(),
 					}.Schedule(count, JobBatchCount);
 
@@ -388,7 +388,7 @@ namespace FrustumCulling
 						AABBExtentXs = _aabbDataSIMD.AABBExtentXs,
 						AABBExtentYs = _aabbDataSIMD.AABBExtentYs,
 						AABBExtentZs = _aabbDataSIMD.AABBExtentZs,
-						Positions = _aabbData.Positions,
+						Positions = _aabbDataSIMD.Positions,
 						Planes = _nativePlanes.Reinterpret<float4>(),
 					}.Schedule(count, JobBatchCount);
 					
