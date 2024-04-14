@@ -1,22 +1,23 @@
 using System;
-using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 using Random = Unity.Mathematics.Random;
 
-namespace SphereCulling
+namespace FrustumCulling
 {
-	public class SphereCullingManager : MonoBehaviour
+	public class CullingManager : MonoBehaviour
 	{
 		public int JobBatchCount = 32;
-		public SphereDemoConfig DemoConfig;
+		public DemoConfig DemoConfig;
 
-		private SphereCullingMode _spawnedCullingMode = SphereCullingMode.Uninitialized;
+		private CullingMode _spawnedCullingMode = CullingMode.Uninitialized;
 		private int _spawnedCount;
 		private SphereDataManaged _dataManaged = new();
 		private SphereDataUnmanaged _dataUnmanaged;
+		private AABBDataUnmanaged _aabbData;
+		private AABBDataSIMD _aabbDataSIMD;
 		private SphereDataSIMD _dataSIMD;
 		private Plane[] _managedPlanes = new Plane[Constants.PlaneCount];
 		private Camera _camera;
@@ -39,8 +40,8 @@ namespace SphereCulling
 
 			switch (DemoConfig.CullingMode)
 			{
-				case SphereCullingMode.NoCull:
-				case SphereCullingMode.CullMono:
+				case CullingMode.NoCull:
+				case CullingMode.Mono:
 				{
 					_dataManaged.Clear();
 
@@ -52,12 +53,12 @@ namespace SphereCulling
 
 					break;
 				}
-				case SphereCullingMode.CullMultiJob:
-				case SphereCullingMode.CullSingleJob:
-				case SphereCullingMode.CullMultiJobBurst:
-				case SphereCullingMode.CullJobsBurstBranchless:
-				case SphereCullingMode.CullJobsBurstBranchlessBatch:
-				case SphereCullingMode.CullJobsBurstSIMD:
+				case CullingMode.ParallelJob:
+				case CullingMode.SingleJob:
+				case CullingMode.ParallelJobBurst:
+				case CullingMode.ParallelJobBurstBranchless:
+				case CullingMode.BatchJobBurstBranchless:
+				case CullingMode.ParallelJobBurstSIMD:
 				{
 					_dataUnmanaged.Init(count);
 
@@ -69,9 +70,9 @@ namespace SphereCulling
 
 					break;
 				}
-				case SphereCullingMode.CullJobsBurstExplicitSSE:
-				case SphereCullingMode.CullJobsBurstExplicitArmNeon:
-				case SphereCullingMode.CullJobsBurstSIMDShuffled:
+				case CullingMode.ParallelJobBurstSSE:
+				case CullingMode.ParallelJobBurstArmNeon:
+				case CullingMode.ParallelJobBurstSIMDSoA:
 				{
 					_dataSIMD.Init(count);
 
@@ -85,45 +86,68 @@ namespace SphereCulling
 
 					break;
 				}
-				case SphereCullingMode.Uninitialized:
+				case CullingMode.AABBCullSIMD:
+				{
+					_aabbData.Init(count);
+
+					for (int i = 0; i < count; i++)
+					{
+						var pos = _random.NextFloat3Direction() * _random.NextFloat() * spawnRadius;
+						_aabbData.Positions[i] = pos;
+						_aabbData.AABBs[i] = new AABB
+						{
+							Center = pos,
+							Extents = new float3(Constants.SphereRadius)
+						};
+					}
+
+					break;
+				}
+				case CullingMode.AABBCullSIMDSoA:
+				case CullingMode.AABBCullArmNeon:
+				{
+					_aabbDataSIMD.Init(count);
+
+					for (int i = 0; i < count; i++)
+					{
+						var pos = _random.NextFloat3Direction() * _random.NextFloat() * spawnRadius;
+						_aabbDataSIMD.Positions[i] = pos;
+						_aabbDataSIMD.AABBCenterXs[i] = pos.x;
+						_aabbDataSIMD.AABBCenterYs[i] = pos.y;
+						_aabbDataSIMD.AABBCenterZs[i] = pos.z;
+						_aabbDataSIMD.AABBExtentXs[i] = Constants.SphereRadius;
+						_aabbDataSIMD.AABBExtentYs[i] = Constants.SphereRadius;
+						_aabbDataSIMD.AABBExtentZs[i] = Constants.SphereRadius;
+					}
+
+					break;
+				}
+				case CullingMode.Uninitialized:
 				default:
 					throw new ArgumentOutOfRangeException();
 			}
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private bool Cull(float3 position)
-		{
-			for (int i = 0; i < Constants.PlaneCount; i++)
-			{
-				var plane = _managedPlanes[i];
-				var n = math.dot(position, plane.normal);
-				// Distance is from plane to origin
-				var outside = Constants.SphereRadius + n <= -plane.distance;
-				if (outside)
-					return false;
-			}
-
-			return true;
 		}
 
 		private void LateUpdate()
 		{
 			switch (_spawnedCullingMode)
 			{
-				case SphereCullingMode.Uninitialized:
-				case SphereCullingMode.NoCull:
-				case SphereCullingMode.CullMono:
+				case CullingMode.Uninitialized:
+				case CullingMode.NoCull:
+				case CullingMode.Mono:
 					break;
-				case SphereCullingMode.CullSingleJob:
-				case SphereCullingMode.CullMultiJobBurst:
-				case SphereCullingMode.CullMultiJob:
-				case SphereCullingMode.CullJobsBurstBranchless:
-				case SphereCullingMode.CullJobsBurstBranchlessBatch:
-				case SphereCullingMode.CullJobsBurstSIMD:
-				case SphereCullingMode.CullJobsBurstExplicitSSE:
-				case SphereCullingMode.CullJobsBurstSIMDShuffled:
-				case SphereCullingMode.CullJobsBurstExplicitArmNeon:
+				case CullingMode.SingleJob:
+				case CullingMode.ParallelJobBurst:
+				case CullingMode.ParallelJob:
+				case CullingMode.ParallelJobBurstBranchless:
+				case CullingMode.BatchJobBurstBranchless:
+				case CullingMode.ParallelJobBurstSIMD:
+				case CullingMode.ParallelJobBurstSSE:
+				case CullingMode.ParallelJobBurstSIMDSoA:
+				case CullingMode.ParallelJobBurstArmNeon:
+				case CullingMode.AABBCullSIMDSoA:
+				case CullingMode.AABBCullSIMD:
+				case CullingMode.AABBCullArmNeon:
 				{
 					_currentJobHandle.Complete();
 
@@ -147,7 +171,7 @@ namespace SphereCulling
 				// It becomes 0 when hand-increasing the count, wait
 				return;
 			}
-			
+
 			if (_spawnedCullingMode != DemoConfig.CullingMode || _spawnedCount != DemoConfig.SphereCount)
 			{
 				_currentJobHandle.Complete();
@@ -165,9 +189,9 @@ namespace SphereCulling
 
 			switch (_spawnedCullingMode)
 			{
-				case SphereCullingMode.Uninitialized:
+				case CullingMode.Uninitialized:
 					break;
-				case SphereCullingMode.NoCull:
+				case CullingMode.NoCull:
 				{
 					var matrices = new NativeArray<InstanceData>(count, Allocator.Temp);
 					for (int i = 0; i < count; i++)
@@ -181,13 +205,13 @@ namespace SphereCulling
 					Graphics.RenderMeshInstanced(new RenderParams(material), mesh, 0, matrices);
 					break;
 				}
-				case SphereCullingMode.CullMono:
+				case CullingMode.Mono:
 				{
 					var matrices = new NativeList<InstanceData>(count, Allocator.Temp);
 					for (int i = 0; i < count; i++)
 					{
 						var position = _dataManaged.Positions[i];
-						if (Cull(position))
+						if (FrustumCullHelper.Cull(position, _nativePlanes))
 						{
 							var rotation = quaternion.identity;
 							var scale = 1.0f;
@@ -198,7 +222,7 @@ namespace SphereCulling
 					Graphics.RenderMeshInstanced(new RenderParams(material), mesh, 0, matrices.AsArray());
 					break;
 				}
-				case SphereCullingMode.CullSingleJob:
+				case CullingMode.SingleJob:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
@@ -210,11 +234,11 @@ namespace SphereCulling
 					}.Schedule();
 					break;
 				}
-				case SphereCullingMode.CullMultiJob:
+				case CullingMode.ParallelJob:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
-					_currentJobHandle = new CullMultiJob
+					_currentJobHandle = new CullParallelJob
 					{
 						CameraPlanes = _nativePlanes,
 						Output = _jobResult.AsParallelWriter(),
@@ -222,11 +246,11 @@ namespace SphereCulling
 					}.Schedule(count, JobBatchCount);
 					break;
 				}
-				case SphereCullingMode.CullMultiJobBurst:
+				case CullingMode.ParallelJobBurst:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
-					_currentJobHandle = new CullMultiJobBurst
+					_currentJobHandle = new CullParallelJobBurst
 					{
 						CameraPlanes = _nativePlanes,
 						Output = _jobResult.AsParallelWriter(),
@@ -235,11 +259,11 @@ namespace SphereCulling
 					break;
 				}
 
-				case SphereCullingMode.CullJobsBurstBranchless:
+				case CullingMode.ParallelJobBurstBranchless:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
-					_currentJobHandle = new CullMultiJobBurstBranchless
+					_currentJobHandle = new CullParallelJobBurstBranchless
 					{
 						Planes = _nativePlanes,
 						Output = _jobResult.AsParallelWriter(),
@@ -247,11 +271,11 @@ namespace SphereCulling
 					}.Schedule(count, JobBatchCount);
 					break;
 				}
-				case SphereCullingMode.CullJobsBurstBranchlessBatch:
+				case CullingMode.BatchJobBurstBranchless:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
-					_currentJobHandle = new CullMultiJobBurstBranchlessBatch
+					_currentJobHandle = new CullBatchJobBurstBranchless
 					{
 						Planes = _nativePlanes,
 						Output = _jobResult.AsParallelWriter(),
@@ -260,24 +284,24 @@ namespace SphereCulling
 
 					break;
 				}
-				case SphereCullingMode.CullJobsBurstSIMD:
+				case CullingMode.ParallelJobBurstSIMD:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
-					_currentJobHandle = new CullMultiJobSIMD
+					_currentJobHandle = new CullParallelJobSIMD
 					{
 						Output = _jobResult.AsParallelWriter(),
 						Positions = _dataUnmanaged.Positions,
-						PlanePackets = CullUtils.CreatePlanePackets()
+						PlanePackets = FrustumCullHelper.CreatePlanePackets()
 					}.Schedule(count, JobBatchCount);
 
 					break;
 				}
-				case SphereCullingMode.CullJobsBurstExplicitSSE:
+				case CullingMode.ParallelJobBurstSSE:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
-					_currentJobHandle = new CullMultiJobSIMDExplicitSSE
+					_currentJobHandle = new CullBatchJobSSE
 					{
 						Output = _jobResult.AsParallelWriter(),
 						Xs = _dataSIMD.Xs,
@@ -288,34 +312,86 @@ namespace SphereCulling
 
 					break;
 				}
-				case SphereCullingMode.CullJobsBurstExplicitArmNeon:
+				case CullingMode.ParallelJobBurstArmNeon:
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
-					_currentJobHandle = new CullMultiJobSIMDExplicitNeon
+					_currentJobHandle = new CullBatchJobArmNeon
 					{
 						Output = _jobResult.AsParallelWriter(),
 						Xs = _dataSIMD.Xs,
 						Ys = _dataSIMD.Ys,
 						Zs = _dataSIMD.Zs,
+						Planes = _nativePlanes.Reinterpret<float4>(),
+					}.Schedule(count, JobBatchCount);
+
+					break;
+				}
+				case CullingMode.ParallelJobBurstSIMDSoA:
+				{
+					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
+
+					_currentJobHandle = new CullBatchJobSIMDSoA
+					{
+						Output = _jobResult.AsParallelWriter(),
+						Xs = _dataSIMD.Xs,
+						Ys = _dataSIMD.Ys,
+						Zs = _dataSIMD.Zs,
+						Planes = _nativePlanes.Reinterpret<float4>(),
+					}.Schedule(count, JobBatchCount);
+
+					break;
+				}
+				case CullingMode.AABBCullSIMD:
+				{
+					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
+
+					_currentJobHandle = new CullAABBParallelJobBurstSIMD
+					{
+						Output = _jobResult.AsParallelWriter(),
+						AABBs = _aabbData.AABBs,
+						Positions = _aabbData.Positions,
+						Planes = FrustumCullHelper.CreatePlanePackets(),
+					}.Schedule(count, JobBatchCount);
+
+					break;
+				}
+				case CullingMode.AABBCullSIMDSoA:
+				{
+					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
+
+					_currentJobHandle = new CullAABBBatchJobBurstSIMDSoA
+					{
+						Output = _jobResult.AsParallelWriter(),
+						AABBCenterXs = _aabbDataSIMD.AABBCenterXs,
+						AABBCenterYs = _aabbDataSIMD.AABBCenterYs,
+						AABBCenterZs = _aabbDataSIMD.AABBCenterZs,
+						AABBExtentXs = _aabbDataSIMD.AABBExtentXs,
+						AABBExtentYs = _aabbDataSIMD.AABBExtentYs,
+						AABBExtentZs = _aabbDataSIMD.AABBExtentZs,
+						Positions = _aabbDataSIMD.Positions,
+						Planes = _nativePlanes.Reinterpret<float4>(),
+					}.Schedule(count, JobBatchCount);
+
+					break;
+				}
+				case CullingMode.AABBCullArmNeon:
+				{
+					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
+
+					_currentJobHandle = new CullAABBBatchJobBurstArmNeon
+					{
+						Output = _jobResult.AsParallelWriter(),
+						AABBCenterXs = _aabbDataSIMD.AABBCenterXs,
+						AABBCenterYs = _aabbDataSIMD.AABBCenterYs,
+						AABBCenterZs = _aabbDataSIMD.AABBCenterZs,
+						AABBExtentXs = _aabbDataSIMD.AABBExtentXs,
+						AABBExtentYs = _aabbDataSIMD.AABBExtentYs,
+						AABBExtentZs = _aabbDataSIMD.AABBExtentZs,
+						Positions = _aabbDataSIMD.Positions,
 						Planes = _nativePlanes.Reinterpret<float4>(),
 					}.Schedule(count, JobBatchCount);
 					
-					break;
-				}
-				case SphereCullingMode.CullJobsBurstSIMDShuffled:
-				{
-					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
-
-					_currentJobHandle = new CullMultiJobSIMDShuffled
-					{
-						Output = _jobResult.AsParallelWriter(),
-						Xs = _dataSIMD.Xs,
-						Ys = _dataSIMD.Ys,
-						Zs = _dataSIMD.Zs,
-						Planes = _nativePlanes.Reinterpret<float4>(),
-					}.Schedule(count, JobBatchCount);
-
 					break;
 				}
 				default:

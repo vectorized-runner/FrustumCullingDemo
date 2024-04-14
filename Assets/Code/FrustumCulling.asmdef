@@ -1,5 +1,5 @@
 {
-    "name": "SphereCulling",
+    "name": "FrustumCulling",
     "rootNamespace": "",
     "references": [
         "Unity.Collections",

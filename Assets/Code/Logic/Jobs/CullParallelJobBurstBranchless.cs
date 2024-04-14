@@ -4,10 +4,10 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace SphereCulling
+namespace FrustumCulling
 {
 	[BurstCompile]
-	public struct CullMultiJobBurstBranchless : IJobParallelFor
+	public struct CullParallelJobBurstBranchless : IJobParallelFor
 	{
 		[ReadOnly]
 		public NativeArray<float3> Positions;

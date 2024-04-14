@@ -6,10 +6,10 @@ using Unity.Mathematics;
 using UnityEngine;
 using static Unity.Burst.Intrinsics.Arm.Neon;
 
-namespace SphereCulling
+namespace FrustumCulling
 {
 	[BurstCompile]
-	public unsafe struct CullMultiJobSIMDExplicitNeon : IJobParallelForBatch
+	public unsafe struct CullBatchJobArmNeon : IJobParallelForBatch
 	{
 		[ReadOnly]
 		public NativeArray<float> Xs;

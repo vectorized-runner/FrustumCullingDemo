@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Unity.Mathematics;
 
-namespace SphereCulling
+namespace FrustumCulling
 {
 	public class SphereDataManaged
 	{

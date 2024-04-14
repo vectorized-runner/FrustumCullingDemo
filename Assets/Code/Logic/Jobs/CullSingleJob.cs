@@ -3,7 +3,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace SphereCulling
+namespace FrustumCulling
 {
 	public struct CullSingleJob : IJob
 	{
@@ -22,7 +22,7 @@ namespace SphereCulling
 			for (int i = 0; i < count; i++)
 			{
 				var position = Positions[i];
-				if (CullUtils.Cull(position, CameraPlanes))
+				if (FrustumCullHelper.Cull(position, CameraPlanes))
 				{
 					Output.Add(float4x4.TRS(position, quaternion.identity, new float3(1, 1, 1)));
 				}
