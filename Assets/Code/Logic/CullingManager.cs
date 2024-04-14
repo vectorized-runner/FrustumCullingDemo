@@ -91,22 +91,6 @@ namespace FrustumCulling
 			}
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private bool Cull(float3 position)
-		{
-			for (int i = 0; i < Constants.PlaneCount; i++)
-			{
-				var plane = _managedPlanes[i];
-				var n = math.dot(position, plane.normal);
-				// Distance is from plane to origin
-				var outside = Constants.SphereRadius + n <= -plane.distance;
-				if (outside)
-					return false;
-			}
-
-			return true;
-		}
-
 		private void LateUpdate()
 		{
 			switch (_spawnedCullingMode)
@@ -187,7 +171,7 @@ namespace FrustumCulling
 					for (int i = 0; i < count; i++)
 					{
 						var position = _dataManaged.Positions[i];
-						if (Cull(position))
+						if (FrustumCullHelper.Cull(position, _nativePlanes))
 						{
 							var rotation = quaternion.identity;
 							var scale = 1.0f;
