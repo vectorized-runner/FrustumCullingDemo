@@ -1,13 +1,15 @@
 using Unity.Burst;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
+using static Unity.Burst.Intrinsics.Arm.Neon;
 
 namespace FrustumCulling
 {
 	[BurstCompile]
-	public struct CullAABBBatchJobBurstArmNeon : IJobParallelForBatch
+	public unsafe struct CullAABBBatchJobBurstArmNeon : IJobParallelForBatch
 	{
 		[ReadOnly]
 		public NativeArray<float3> Positions;
@@ -45,16 +47,23 @@ namespace FrustumCulling
 			var p3 = Planes[3];
 			var p4 = Planes[4];
 			var p5 = Planes[5];
+			var cxPtr = (float*)AABBCenterXs.GetUnsafeReadOnlyPtr();
+			var cyPtr = (float*)AABBCenterYs.GetUnsafeReadOnlyPtr();
+			var czPtr = (float*)AABBCenterZs.GetUnsafeReadOnlyPtr();
+			var exPtr = (float*)AABBExtentXs.GetUnsafeReadOnlyPtr();
+			var eyPtr = (float*)AABBExtentYs.GetUnsafeReadOnlyPtr();
+			var ezPtr = (float*)AABBExtentZs.GetUnsafeReadOnlyPtr();
+			var results = stackalloc uint[4];
 
 			for (int i = 0; i < count; i += 4)
 			{
 				var idx = startIndex + i;
-				var cxs = AABBCenterXs.ReinterpretLoad<float4>(idx);
-				var cys = AABBCenterYs.ReinterpretLoad<float4>(idx);
-				var czs = AABBCenterZs.ReinterpretLoad<float4>(idx);
-				var exs = AABBExtentXs.ReinterpretLoad<float4>(idx);
-				var eys = AABBExtentYs.ReinterpretLoad<float4>(idx);
-				var ezs = AABBExtentZs.ReinterpretLoad<float4>(idx);
+				var cxs = vld1q_f32(cxPtr + idx);
+				var cys = vld1q_f32(cyPtr + idx);
+				var czs = vld1q_f32(czPtr + idx);
+				var exs = vld1q_f32(exPtr + idx);
+				var eys = vld1q_f32(eyPtr + idx);
+				var ezs = vld1q_f32(ezPtr + idx);
 
 				// Tests 4 AABB against 6 Planes
 				bool4 mask = p0.x * cxs + p0.y * cys + p0.z * czs + p0.w + math.abs(p0.x) * exs + math.abs(p0.y) * eys + math.abs(p0.z) * ezs > 0.0f &
