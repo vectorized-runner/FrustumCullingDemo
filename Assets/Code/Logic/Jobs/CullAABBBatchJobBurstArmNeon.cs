@@ -25,7 +25,7 @@ namespace FrustumCulling
 
 		[ReadOnly]
 		public NativeArray<float> AABBCenterZs;
-		
+
 		[ReadOnly]
 		public NativeArray<float> AABBExtentXs;
 
@@ -34,13 +34,13 @@ namespace FrustumCulling
 
 		[ReadOnly]
 		public NativeArray<float> AABBExtentZs;
-		
+
 		public NativeList<float4x4>.ParallelWriter Output;
 
 		public void Execute(int startIndex, int count)
 		{
 			Debug.Assert(count % 4 == 0);
-			
+
 			var p0 = Planes[0];
 			var p1 = Planes[1];
 			var p2 = Planes[2];
@@ -53,6 +53,7 @@ namespace FrustumCulling
 			var exPtr = (float*)AABBExtentXs.GetUnsafeReadOnlyPtr();
 			var eyPtr = (float*)AABBExtentYs.GetUnsafeReadOnlyPtr();
 			var ezPtr = (float*)AABBExtentZs.GetUnsafeReadOnlyPtr();
+			var zero = vdupq_n_f32(0.0f);
 			var results = stackalloc uint[4];
 
 			for (int i = 0; i < count; i += 4)
@@ -65,34 +66,41 @@ namespace FrustumCulling
 				var eys = vld1q_f32(eyPtr + idx);
 				var ezs = vld1q_f32(ezPtr + idx);
 
-				// Tests 4 AABB against 6 Planes
-				bool4 mask = p0.x * cxs + p0.y * cys + p0.z * czs + p0.w + math.abs(p0.x) * exs + math.abs(p0.y) * eys + math.abs(p0.z) * ezs > 0.0f &
-				             p1.x * cxs + p1.y * cys + p1.z * czs + p1.w + math.abs(p1.x) * exs + math.abs(p1.y) * eys + math.abs(p1.z) * ezs > 0.0f &
-				             p2.x * cxs + p2.y * cys + p2.z * czs + p2.w + math.abs(p2.x) * exs + math.abs(p2.y) * eys + math.abs(p2.z) * ezs > 0.0f &
-				             p3.x * cxs + p3.y * cys + p3.z * czs + p3.w + math.abs(p3.x) * exs + math.abs(p3.y) * eys + math.abs(p3.z) * ezs > 0.0f &
-				             p4.x * cxs + p4.y * cys + p4.z * czs + p4.w + math.abs(p4.x) * exs + math.abs(p4.y) * eys + math.abs(p4.z) * ezs > 0.0f &
-				             p5.x * cxs + p5.y * cys + p5.z * czs + p5.w + math.abs(p5.x) * exs + math.abs(p5.y) * eys + math.abs(p5.z) * ezs > 0.0f;
+				var p0x = vdupq_n_f32(p0.x);
+				var p0y = vdupq_n_f32(p0.y);
+				var p0z = vdupq_n_f32(p0.z);
+				var dist0 = vaddq_f32(
+					vaddq_f32(vaddq_f32(vmulq_f32(p0x, cxs), vmulq_f32(p0y, cys)), vmulq_f32(p0z, czs)),
+					vdupq_n_f32(p0.w));
+				var rad0 = vaddq_f32(vaddq_f32(vmulq_f32(vabsq_f32(p0x), exs), vmulq_f32(vabsq_f32(p0y), eys)),
+					vmulq_f32(vabsq_f32(p0z), ezs));
+				var sum0 = vaddq_f32(dist0, rad0);
+				var res0 = vcgtq_f32(sum0, zero);
+
+				var res = vandq_u32(vandq_u32(vandq_u32(vandq_u32(vandq_u32(res0, res1), res2), res3), res4), res5);
+
+				vst1q_u32(results, res);
 
 				// Normally you'd do reinterpretStore to visibility mask, but we're doing culling and adding at the same time.
-				if (mask.x)
+				if (results[0] != 0)
 				{
 					var pos = Positions[idx];
 					Output.AddNoResize(float4x4.TRS(pos, quaternion.identity, new float3(1, 1, 1)));
 				}
 
-				if (mask.y)
+				if (results[1] != 0)
 				{
 					var pos = Positions[idx + 1];
 					Output.AddNoResize(float4x4.TRS(pos, quaternion.identity, new float3(1, 1, 1)));
 				}
 
-				if (mask.z)
+				if (results[2] != 0)
 				{
 					var pos = Positions[idx + 2];
 					Output.AddNoResize(float4x4.TRS(pos, quaternion.identity, new float3(1, 1, 1)));
 				}
 
-				if (mask.w)
+				if (results[3] != 0)
 				{
 					var pos = Positions[idx + 3];
 					Output.AddNoResize(float4x4.TRS(pos, quaternion.identity, new float3(1, 1, 1)));
