@@ -109,6 +109,17 @@ namespace FrustumCulling
 					vmulq_f32(vabsq_f32(p3z), ezs));
 				var sum3 = vaddq_f32(dist3, rad3);
 				var res3 = vcgtq_f32(sum3, zero);
+				
+				var p4x = vdupq_n_f32(p4.x);
+				var p4y = vdupq_n_f32(p4.y);
+				var p4z = vdupq_n_f32(p4.z);
+				var dist4 = vaddq_f32(
+					vaddq_f32(vaddq_f32(vmulq_f32(p4x, cxs), vmulq_f32(p4y, cys)), vmulq_f32(p4z, czs)),
+					vdupq_n_f32(p4.w));
+				var rad4 = vaddq_f32(vaddq_f32(vmulq_f32(vabsq_f32(p4x), exs), vmulq_f32(vabsq_f32(p4y), eys)),
+					vmulq_f32(vabsq_f32(p4z), ezs));
+				var sum4 = vaddq_f32(dist4, rad4);
+				var res4 = vcgtq_f32(sum4, zero);
 				var res = vandq_u32(vandq_u32(vandq_u32(vandq_u32(vandq_u32(res0, res1), res2), res3), res4), res5);
 
 				vst1q_u32(results, res);
