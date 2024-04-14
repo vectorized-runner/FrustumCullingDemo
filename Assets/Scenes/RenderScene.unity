@@ -134,7 +134,7 @@ GameObject:
   - component: {fileID: 270539883}
   - component: {fileID: 270539884}
   m_Layer: 0
-  m_Name: SphereCullingManager
+  m_Name: CullingManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -167,6 +167,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3e85d2d9c8f342068d407e1f68da911, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  JobBatchCount: 32
   DemoConfig:
     SphereMesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
     SphereMaterial: {fileID: 2100000, guid: 58e86e1e7befb4263a60f843c2908500, type: 2}
