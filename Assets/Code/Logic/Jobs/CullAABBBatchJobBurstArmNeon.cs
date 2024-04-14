@@ -93,12 +93,22 @@ namespace FrustumCulling
 				var p2z = vdupq_n_f32(p2.z);
 				var dist2 = vaddq_f32(
 					vaddq_f32(vaddq_f32(vmulq_f32(p2x, cxs), vmulq_f32(p2y, cys)), vmulq_f32(p2z, czs)),
-					vdupq_n_f32(p0.w));
+					vdupq_n_f32(p2.w));
 				var rad2 = vaddq_f32(vaddq_f32(vmulq_f32(vabsq_f32(p2x), exs), vmulq_f32(vabsq_f32(p2y), eys)),
 					vmulq_f32(vabsq_f32(p2z), ezs));
 				var sum2 = vaddq_f32(dist2, rad2);
 				var res2 = vcgtq_f32(sum2, zero);
 
+				var p3x = vdupq_n_f32(p3.x);
+				var p3y = vdupq_n_f32(p3.y);
+				var p3z = vdupq_n_f32(p3.z);
+				var dist3 = vaddq_f32(
+					vaddq_f32(vaddq_f32(vmulq_f32(p3x, cxs), vmulq_f32(p3y, cys)), vmulq_f32(p3z, czs)),
+					vdupq_n_f32(p3.w));
+				var rad3 = vaddq_f32(vaddq_f32(vmulq_f32(vabsq_f32(p3x), exs), vmulq_f32(vabsq_f32(p3y), eys)),
+					vmulq_f32(vabsq_f32(p3z), ezs));
+				var sum3 = vaddq_f32(dist3, rad3);
+				var res3 = vcgtq_f32(sum3, zero);
 				var res = vandq_u32(vandq_u32(vandq_u32(vandq_u32(vandq_u32(res0, res1), res2), res3), res4), res5);
 
 				vst1q_u32(results, res);
