@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -17,6 +16,7 @@ namespace FrustumCulling
 		private int _spawnedCount;
 		private SphereDataManaged _dataManaged = new();
 		private SphereDataUnmanaged _dataUnmanaged;
+		private AABBDataUnmanaged _aabbData;
 		private SphereDataSIMD _dataSIMD;
 		private Plane[] _managedPlanes = new Plane[Constants.PlaneCount];
 		private Camera _camera;
@@ -85,6 +85,23 @@ namespace FrustumCulling
 
 					break;
 				}
+				case CullingMode.AABBCullSIMD:
+				{
+					_aabbData.Init(count);
+
+					for (int i = 0; i < count; i++)
+					{
+						var pos = _random.NextFloat3Direction() * _random.NextFloat() * spawnRadius;
+						_aabbData.Positions[i] = pos;
+						_aabbData.AABBs[i] = new AABB
+						{
+							Center = pos,
+							Extents = new float3(Constants.SphereRadius)
+						};
+					}
+
+					break;
+				}
 				case CullingMode.Uninitialized:
 				default:
 					throw new ArgumentOutOfRangeException();
@@ -108,6 +125,7 @@ namespace FrustumCulling
 				case CullingMode.ParallelJobBurstSSE:
 				case CullingMode.ParallelJobBurstSIMDSoA:
 				case CullingMode.ParallelJobBurstArmNeon:
+				case CullingMode.AABBCullSIMD:
 				{
 					_currentJobHandle.Complete();
 
@@ -131,7 +149,7 @@ namespace FrustumCulling
 				// It becomes 0 when hand-increasing the count, wait
 				return;
 			}
-			
+
 			if (_spawnedCullingMode != DemoConfig.CullingMode || _spawnedCount != DemoConfig.SphereCount)
 			{
 				_currentJobHandle.Complete();
@@ -284,7 +302,7 @@ namespace FrustumCulling
 						Zs = _dataSIMD.Zs,
 						Planes = _nativePlanes.Reinterpret<float4>(),
 					}.Schedule(count, JobBatchCount);
-					
+
 					break;
 				}
 				case CullingMode.ParallelJobBurstSIMDSoA:
@@ -298,6 +316,20 @@ namespace FrustumCulling
 						Ys = _dataSIMD.Ys,
 						Zs = _dataSIMD.Zs,
 						Planes = _nativePlanes.Reinterpret<float4>(),
+					}.Schedule(count, JobBatchCount);
+
+					break;
+				}
+				case CullingMode.AABBCullSIMD:
+				{
+					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
+
+					_currentJobHandle = new CullAABBParallelJobBurstSIMD
+					{
+						Output = _jobResult.AsParallelWriter(),
+						AABBs = _aabbData.AABBs,
+						Positions = _aabbData.Positions,
+						Planes = FrustumCullHelper.CreatePlanePackets(),
 					}.Schedule(count, JobBatchCount);
 
 					break;
