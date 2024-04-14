@@ -18,5 +18,6 @@ namespace FrustumCulling
 		// AABB Bounds (only want to see SIMD comparison, other cases not included)
 		AABBCullSIMD,
 		AABBCullSIMDSoA,
+		AABBCullArmNeon,
 	}
 }

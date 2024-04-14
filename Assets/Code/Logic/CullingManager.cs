@@ -104,6 +104,7 @@ namespace FrustumCulling
 					break;
 				}
 				case CullingMode.AABBCullSIMDSoA:
+				case CullingMode.AABBCullArmNeon:
 				{
 					_aabbDataSIMD.Init(count);
 
@@ -146,6 +147,7 @@ namespace FrustumCulling
 				case CullingMode.ParallelJobBurstArmNeon:
 				case CullingMode.AABBCullSIMDSoA:
 				case CullingMode.AABBCullSIMD:
+				case CullingMode.AABBCullArmNeon:
 				{
 					_currentJobHandle.Complete();
 
@@ -358,7 +360,7 @@ namespace FrustumCulling
 				{
 					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
 
-					_currentJobHandle = new CullAABBParallelJobBurstSIMDSoA
+					_currentJobHandle = new CullAABBBatchJobBurstSIMDSoA
 					{
 						Output = _jobResult.AsParallelWriter(),
 						AABBCenterXs = _aabbDataSIMD.AABBCenterXs,
@@ -371,6 +373,25 @@ namespace FrustumCulling
 						Planes = _nativePlanes.Reinterpret<float4>(),
 					}.Schedule(count, JobBatchCount);
 
+					break;
+				}
+				case CullingMode.AABBCullArmNeon:
+				{
+					_jobResult = new NativeList<float4x4>(count, Allocator.TempJob);
+
+					_currentJobHandle = new CullAABBBatchJobBurstArmNeon
+					{
+						Output = _jobResult.AsParallelWriter(),
+						AABBCenterXs = _aabbDataSIMD.AABBCenterXs,
+						AABBCenterYs = _aabbDataSIMD.AABBCenterYs,
+						AABBCenterZs = _aabbDataSIMD.AABBCenterZs,
+						AABBExtentXs = _aabbDataSIMD.AABBExtentXs,
+						AABBExtentYs = _aabbDataSIMD.AABBExtentYs,
+						AABBExtentZs = _aabbDataSIMD.AABBExtentZs,
+						Positions = _aabbData.Positions,
+						Planes = _nativePlanes.Reinterpret<float4>(),
+					}.Schedule(count, JobBatchCount);
+					
 					break;
 				}
 				default:
